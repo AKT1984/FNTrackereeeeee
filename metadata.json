@@ -1,0 +1,5 @@
+{
+  "name": "FinTrack RN",
+  "description": "Personal finance tracker with modular Redux architecture and Firebase.",
+  "requestFramePermissions": []
+}

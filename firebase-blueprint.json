@@ -1,0 +1,58 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "Secure profiles containing user preferences.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "UUID of the user" },
+        "email": { "type": "string", "format": "email" },
+        "currency": { "type": "string", "description": "e.g., MDL, EUR, USD" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "currency", "createdAt"]
+    },
+    "Category": {
+      "title": "Category",
+      "description": "Personalized transaction categories.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": ["string", "null"], "description": "null if default system category" },
+        "name": { "type": "string" },
+        "color": { "type": "string", "description": "HEX color code" },
+        "icon": { "type": "string" }
+      },
+      "required": ["id", "name", "color", "icon"]
+    },
+    "Transaction": {
+      "title": "Transaction",
+      "description": "Financial operations.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "amount": { "type": "number" },
+        "type": { "type": "string", "enum": ["INCOME", "EXPENSE"] },
+        "categoryId": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" },
+        "description": { "type": "string" }
+      },
+      "required": ["id", "userId", "amount", "type", "categoryId", "date", "description"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "User profiles collection"
+    },
+    "/categories/{categoryId}": {
+      "schema": { "$ref": "#/entities/Category" },
+      "description": "Categories collection"
+    },
+    "/transactions/{transactionId}": {
+      "schema": { "$ref": "#/entities/Transaction" },
+      "description": "Transactions collection"
+    }
+  }
+}
