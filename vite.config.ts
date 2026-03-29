@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react';
 import path from 'path';
 import {defineConfig, loadEnv} from 'vite';
 import reactNativeWeb from 'vite-plugin-react-native-web';
+import { transform } from 'esbuild';
 
 const codegenFixPlugin = () => ({
   name: 'codegen-fix',
@@ -14,10 +15,35 @@ const codegenFixPlugin = () => ({
   }
 });
 
+const victoryNativeJsxPlugin = () => ({
+  name: 'victory-native-jsx',
+  enforce: 'pre',
+  async transform(code, id) {
+    if (id.includes('victory-native') && id.endsWith('.js')) {
+      const result = await transform(code, {
+        loader: 'jsx',
+        sourcefile: id,
+      });
+      return {
+        code: result.code,
+        map: result.map || null,
+      };
+    }
+  }
+});
+
 export default defineConfig(({mode}) => {
   const env = loadEnv(mode, '.', '');
   return {
-    plugins: [codegenFixPlugin(), react(), tailwindcss(), reactNativeWeb()],
+    plugins: [
+      codegenFixPlugin(), 
+      victoryNativeJsxPlugin(),
+      react({
+        include: /\.(jsx|tsx|js|ts)$/
+      }), 
+      tailwindcss(), 
+      reactNativeWeb()
+    ],
     define: {
       'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
     },
@@ -27,6 +53,7 @@ export default defineConfig(({mode}) => {
       },
     },
     optimizeDeps: {
+      include: ['victory-native'],
       esbuildOptions: {
         loader: {
           '.js': 'jsx',

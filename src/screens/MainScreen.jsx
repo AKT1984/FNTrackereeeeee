@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { View, Text, FlatList, ActivityIndicator, TouchableOpacity, useColorScheme } from 'react-native';
 import { useSelector, useDispatch } from 'react-redux';
-import { PieChart } from 'react-native-svg-charts';
+import { VictoryPie } from 'victory-native';
 import { subscribeToTransactions } from '../store/modules/transactions/action-creators';
 import { subscribeToCategories } from '../store/modules/categories/action-creators';
 import { selectTotalBudget, selectTotalExpenses, selectTotalBalance, selectTransactions } from '../store/modules/transactions/selectors';
@@ -40,10 +40,9 @@ export default function MainScreen({ navigation }) {
     .map((categoryId) => {
       const category = categories.find(c => c.id === categoryId);
       return {
-        key: categoryId,
-        value: expensesByCategory[categoryId],
-        svg: { fill: category ? category.color : '#94a3b8' },
-        arc: { outerRadius: '100%', padAngle: 0.05 },
+        x: category ? category.name : 'Other',
+        y: expensesByCategory[categoryId],
+        color: category ? category.color : '#94a3b8',
       };
     });
 
@@ -92,12 +91,14 @@ export default function MainScreen({ navigation }) {
       </View>
 
       {pieData.length > 0 && (
-        <View className="px-5 mb-4 h-40">
-          <PieChart
-            style={{ height: 160 }}
+        <View className="px-5 mb-4 h-40 items-center justify-center">
+          <VictoryPie
+            height={160}
             data={pieData}
-            innerRadius="50%"
-            padAngle={0}
+            innerRadius={50}
+            colorScale={pieData.map(d => d.color)}
+            labels={() => null} // Hide labels to save space
+            padding={0}
           />
         </View>
       )}
