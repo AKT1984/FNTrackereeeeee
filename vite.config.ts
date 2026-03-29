@@ -12,6 +12,9 @@ const codegenFixPlugin = () => ({
     if (id.includes('codegenNativeComponent')) {
       return path.resolve(__dirname, 'src/mocks/codegenNativeComponent.js');
     }
+    if (id.includes('NativeSvgRenderableModule') || id.includes('NativeSvgViewModule')) {
+      return path.resolve(__dirname, 'src/mocks/NativeSvgFabricMock.js');
+    }
   }
 });
 
@@ -62,8 +65,11 @@ export default defineConfig(({mode}) => {
           {
             name: 'codegen-fix-esbuild',
             setup(build) {
-              build.onResolve({ filter: /codegenNativeComponent/ }, args => {
-                return { path: path.resolve(__dirname, 'src/mocks/codegenNativeComponent.js') };
+              build.onResolve({ filter: /codegenNativeComponent|NativeSvgRenderableModule|NativeSvgViewModule/ }, args => {
+                if (args.path.includes('codegenNativeComponent')) {
+                  return { path: path.resolve(__dirname, 'src/mocks/codegenNativeComponent.js') };
+                }
+                return { path: path.resolve(__dirname, 'src/mocks/NativeSvgFabricMock.js') };
               });
             },
           },
