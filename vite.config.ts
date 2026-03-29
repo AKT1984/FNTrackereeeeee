@@ -58,6 +58,16 @@ export default defineConfig(({mode}) => {
         loader: {
           '.js': 'jsx',
         },
+        plugins: [
+          {
+            name: 'codegen-fix-esbuild',
+            setup(build) {
+              build.onResolve({ filter: /codegenNativeComponent/ }, args => {
+                return { path: path.resolve(__dirname, 'src/mocks/codegenNativeComponent.js') };
+              });
+            },
+          },
+        ],
       },
     },
     build: {
