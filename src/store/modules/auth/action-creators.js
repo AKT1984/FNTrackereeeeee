@@ -1,4 +1,4 @@
-import { signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from 'firebase/auth';
+import { signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider, signOut, onAuthStateChanged } from 'firebase/auth';
 import { getDoc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { auth } from '../../../firebase';
 import * as actions from './actions';
@@ -30,6 +30,12 @@ const handleFirestoreError = (error, operationType, path) => {
 };
 
 export const initAuthListener = () => (dispatch) => {
+  // Check for redirect result first to catch any errors from signInWithRedirect
+  getRedirectResult(auth).catch((error) => {
+    console.error("Redirect login error:", error);
+    dispatch(actions.loginError(error.message));
+  });
+
   return onAuthStateChanged(auth, async (user) => {
     if (user) {
       let currency = 'USD';
@@ -100,7 +106,23 @@ export const loginWithGoogle = () => async (dispatch) => {
       currency,
     }));
   } catch (error) {
-    dispatch(actions.loginError(error.message));
+    console.error("Login error:", error);
+    // If popup is blocked or closed, fallback to redirect
+    if (
+      error.code === 'auth/popup-blocked' ||
+      error.code === 'auth/popup-closed-by-user' || 
+      error.code === 'auth/cross-origin-opener-policy-failed' ||
+      error.message?.includes('Cross-Origin-Opener-Policy')
+    ) {
+      console.log("Popup failed, falling back to redirect...");
+      try {
+        await signInWithRedirect(auth, provider);
+      } catch (redirectError) {
+        dispatch(actions.loginError(redirectError.message));
+      }
+    } else {
+      dispatch(actions.loginError(error.message));
+    }
   }
 };
 
