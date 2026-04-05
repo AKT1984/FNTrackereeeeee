@@ -1,5 +1,5 @@
 import { signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from 'firebase/auth';
-import { getDoc, setDoc } from 'firebase/firestore';
+import { getDoc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { auth } from '../../../firebase';
 import * as actions from './actions';
 import * as routes from './routes';
@@ -32,21 +32,35 @@ const handleFirestoreError = (error, operationType, path) => {
 export const initAuthListener = () => (dispatch) => {
   return onAuthStateChanged(auth, async (user) => {
     if (user) {
+      let currency = 'USD';
       try {
         // Ensure user document exists in Firestore
         const userDocRef = routes.getUserDoc(user.uid);
-        const userDoc = await getDoc(userDocRef);
+        let userDoc;
+        try {
+          userDoc = await getDoc(userDocRef);
+        } catch (e) {
+          handleFirestoreError(e, 'get', `users/${user.uid}`);
+          throw e;
+        }
         
         if (!userDoc.exists()) {
-          await setDoc(userDocRef, {
-            uid: user.uid,
-            email: user.email,
-            currency: 'USD', // Default currency
-            createdAt: new Date().toISOString(),
-          });
+          try {
+            await setDoc(userDocRef, {
+              uid: user.uid,
+              email: user.email,
+              currency: 'USD', // Default currency
+              createdAt: serverTimestamp(),
+            });
+          } catch (e) {
+            handleFirestoreError(e, 'create', `users/${user.uid}`);
+            throw e;
+          }
+        } else {
+          currency = userDoc.data().currency || 'USD';
         }
       } catch (error) {
-        handleFirestoreError(error, 'get', `users/${user.uid}`);
+        // Error is already handled and logged
       }
       
       dispatch(actions.authStateChanged({
@@ -54,6 +68,7 @@ export const initAuthListener = () => (dispatch) => {
         email: user.email,
         displayName: user.displayName,
         photoURL: user.photoURL,
+        currency,
       }));
     } else {
       dispatch(actions.authStateChanged(null));
@@ -65,11 +80,24 @@ export const loginWithGoogle = () => async (dispatch) => {
   dispatch(actions.loginRequest());
   try {
     const result = await signInWithPopup(auth, provider);
+    
+    let currency = 'USD';
+    try {
+      const userDocRef = routes.getUserDoc(result.user.uid);
+      const userDoc = await getDoc(userDocRef);
+      if (userDoc.exists()) {
+        currency = userDoc.data().currency || 'USD';
+      }
+    } catch (e) {
+      console.error("Error fetching user doc on login", e);
+    }
+
     dispatch(actions.loginSuccess({
       uid: result.user.uid,
       email: result.user.email,
       displayName: result.user.displayName,
       photoURL: result.user.photoURL,
+      currency,
     }));
   } catch (error) {
     dispatch(actions.loginError(error.message));
@@ -83,5 +111,18 @@ export const logoutUser = () => async (dispatch) => {
     dispatch(actions.logoutSuccess());
   } catch (error) {
     dispatch(actions.logoutError(error.message));
+  }
+};
+
+export const updateCurrency = (currency) => async (dispatch, getState) => {
+  const { user } = getState().auth;
+  if (!user) return;
+
+  try {
+    const userDocRef = routes.getUserDoc(user.uid);
+    await updateDoc(userDocRef, { currency });
+    dispatch(actions.updateCurrencySuccess(currency));
+  } catch (error) {
+    handleFirestoreError(error, 'update', `users/${user.uid}`);
   }
 };

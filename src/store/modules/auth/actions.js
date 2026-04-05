@@ -31,3 +31,8 @@ export const logoutError = (error) => ({
   type: types.LOGOUT_ERROR,
   payload: error,
 });
+
+export const updateCurrencySuccess = (currency) => ({
+  type: types.UPDATE_CURRENCY_SUCCESS,
+  payload: currency,
+});

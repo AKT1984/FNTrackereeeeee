@@ -1,4 +1,4 @@
-import { getDocs, addDoc, setDoc, deleteDoc, query, where, onSnapshot } from 'firebase/firestore';
+import { getDocs, addDoc, setDoc, deleteDoc, query, where, onSnapshot, doc } from 'firebase/firestore';
 import * as actions from './actions';
 import * as routes from './routes';
 import { auth } from '../../../firebase';
@@ -60,13 +60,15 @@ export const addCategory = (categoryData) => async (dispatch) => {
     const userId = auth.currentUser?.uid;
     if (!userId) throw new Error('User not authenticated');
 
+    const docRef = doc(routes.getCategoriesCollection());
+
     const newCategory = {
       ...categoryData,
+      id: docRef.id,
       userId,
     };
 
-    const docRef = await addDoc(routes.getCategoriesCollection(), newCategory);
-    await setDoc(docRef, { id: docRef.id }, { merge: true });
+    await setDoc(docRef, newCategory);
   } catch (error) {
     const handledError = handleFirestoreError(error, 'create', 'categories');
     dispatch(actions.addCategoryError(handledError.message));

@@ -20,17 +20,19 @@ const storage = {
 import transactionsReducer from './modules/transactions/reducers';
 import authReducer from './modules/auth/reducers';
 import categoriesReducer from './modules/categories/reducers';
+import accountsReducer from './modules/accounts/reducers';
 
 const rootReducer = combineReducers({
   transactions: transactionsReducer,
   auth: authReducer,
   categories: categoriesReducer,
+  accounts: accountsReducer,
 });
 
 const persistConfig = {
   key: 'root',
   storage,
-  whitelist: ['transactions', 'categories'], // cache these
+  whitelist: ['transactions', 'categories', 'accounts'], // cache these
 };
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);

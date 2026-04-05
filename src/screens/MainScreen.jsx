@@ -1,134 +1,164 @@
 import React, { useEffect } from 'react';
-import { View, Text, FlatList, ActivityIndicator, TouchableOpacity, useColorScheme } from 'react-native';
+import { View, Text, FlatList, ActivityIndicator, TouchableOpacity, useColorScheme, StyleSheet, ScrollView } from 'react-native';
 import { useSelector, useDispatch } from 'react-redux';
-import { VictoryPie } from 'victory-native';
 import { subscribeToTransactions } from '../store/modules/transactions/action-creators';
 import { subscribeToCategories } from '../store/modules/categories/action-creators';
-import { selectTotalBudget, selectTotalExpenses, selectTotalBalance, selectTransactions } from '../store/modules/transactions/selectors';
+import { subscribeToAccounts } from '../store/modules/accounts/action-creators';
+import { selectTotalBudget, selectTotalExpenses, selectTotalBalance, selectTransactions, selectBalancesByAccount } from '../store/modules/transactions/selectors';
+
+const CURRENCY_SYMBOLS = {
+  USD: '$',
+  EUR: '€',
+  GBP: '£',
+  JPY: '¥',
+  MDL: 'L',
+  RUB: '₽',
+  UAH: '₴',
+};
 
 export default function MainScreen({ navigation }) {
   const dispatch = useDispatch();
   const isDarkMode = useColorScheme() === 'dark';
   
+  const user = useSelector(state => state.auth.user);
+  const currencySymbol = CURRENCY_SYMBOLS[user?.currency || 'USD'] || '$';
+
   const transactions = useSelector(selectTransactions);
   const isLoading = useSelector(state => state.transactions.isLoading);
   const error = useSelector(state => state.transactions.error);
   const categories = useSelector(state => state.categories.categories || []);
+  const accounts = useSelector(state => state.accounts.accounts || []);
   
   const totalBudget = useSelector(selectTotalBudget);
   const totalExpenses = useSelector(selectTotalExpenses);
   const totalBalance = useSelector(selectTotalBalance);
+  const balancesByAccount = useSelector(selectBalancesByAccount);
+
+  // Calculate default balance including any transactions from deleted accounts
+  const defaultBalance = Object.keys(balancesByAccount).reduce((sum, accId) => {
+    if (accId === 'default' || !accounts.find(a => a.id === accId)) {
+      return sum + balancesByAccount[accId];
+    }
+    return sum;
+  }, 0);
 
   useEffect(() => {
     const unsubscribeTransactions = dispatch(subscribeToTransactions());
     const unsubscribeCategories = dispatch(subscribeToCategories());
+    const unsubscribeAccounts = dispatch(subscribeToAccounts());
     
     return () => {
       if (typeof unsubscribeTransactions === 'function') unsubscribeTransactions();
       if (typeof unsubscribeCategories === 'function') unsubscribeCategories();
+      if (typeof unsubscribeAccounts === 'function') unsubscribeAccounts();
     };
   }, [dispatch]);
 
-  const expenses = transactions.filter(t => t.type === 'EXPENSE');
-  const expensesByCategory = expenses.reduce((acc, curr) => {
-    acc[curr.categoryId] = (acc[curr.categoryId] || 0) + (Number(curr.amount) || 0);
-    return acc;
-  }, {});
-
-  const pieData = Object.keys(expensesByCategory)
-    .filter(categoryId => expensesByCategory[categoryId] > 0)
-    .map((categoryId) => {
-      const category = categories.find(c => c.id === categoryId);
-      return {
-        x: category ? category.name : 'Other',
-        y: expensesByCategory[categoryId],
-        color: category ? category.color : '#94a3b8',
-      };
-    });
-
-  const renderItem = ({ item }) => (
-    <TouchableOpacity 
-      className={`flex-row justify-between items-center p-4 rounded-xl mb-3 shadow-sm ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}
-      onPress={() => navigation.navigate('EditTransaction', { transaction: item })}
-    >
-      <View className="flex-1">
-        <Text className={`text-base font-medium mb-1 ${isDarkMode ? 'text-gray-100' : 'text-gray-900'}`}>
-          {item.description || 'No Description'}
-        </Text>
-        <Text className="text-xs text-gray-400">
-          {item.date ? new Date(item.date).toLocaleDateString() : 'N/A'}
-        </Text>
-      </View>
-      <Text className={`text-base font-bold ${item.type === 'INCOME' ? 'text-green-500' : 'text-red-500'}`}>
-        {item.type === 'INCOME' ? '+' : '-'}${Number(item.amount).toFixed(2)}
-      </Text>
-    </TouchableOpacity>
-  );
-
-  return (
-    <View className={`flex-1 ${isDarkMode ? 'bg-gray-900' : 'bg-gray-100'}`}>
-      <View className="p-5">
-        <View className={`rounded-2xl p-5 mb-4 shadow-sm ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
-          <Text className={`text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Total Balance</Text>
-          <Text className={`text-3xl font-bold ${totalBalance >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-            ${totalBalance.toFixed(2)}
+  const renderItem = ({ item }) => {
+    const account = accounts.find(a => a.id === item.accountId);
+    const accountName = account ? account.name : 'Default Account';
+    
+    return (
+      <TouchableOpacity 
+        style={[styles.transactionCard, isDarkMode ? styles.bgDarkCard : styles.bgLightCard]}
+        onPress={() => navigation.navigate('EditTransaction', { transaction: item })}
+      >
+        <View style={styles.flex1}>
+          <Text style={[styles.transactionDesc, isDarkMode ? styles.textLight : styles.textDark]}>
+            {item.description || 'No Description'}
+          </Text>
+          <Text style={styles.transactionDate}>
+            {item.date ? (item.date.toDate ? item.date.toDate().toLocaleDateString() : new Date(item.date).toLocaleDateString()) : 'N/A'} • {accountName}
           </Text>
         </View>
-        <View className="flex-row justify-between">
-          <View className={`w-[48%] rounded-2xl p-5 shadow-sm ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
-            <Text className={`text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Budget (Income)</Text>
-            <Text className="text-2xl font-bold text-green-500">
-              ${totalBudget.toFixed(2)}
+        <Text style={[styles.transactionAmount, item.type === 'INCOME' ? styles.textGreen : styles.textRed]}>
+          {item.type === 'INCOME' ? '+' : '-'}{currencySymbol}{Number(item.amount).toFixed(2)}
+        </Text>
+      </TouchableOpacity>
+    );
+  };
+
+  return (
+    <View style={[styles.container, isDarkMode ? styles.bgDark : styles.bgLight]}>
+      <View style={styles.headerPadding}>
+        <View style={[styles.balanceCard, isDarkMode ? styles.bgDarkCard : styles.bgLightCard]}>
+          <View style={styles.rowBetween}>
+            <Text style={[styles.cardLabel, isDarkMode ? styles.textGray400 : styles.textGray500]}>Total Balance</Text>
+            <TouchableOpacity onPress={() => navigation.navigate('Reports')}>
+              <Text style={styles.reportsLink}>View Reports &gt;</Text>
+            </TouchableOpacity>
+          </View>
+          <Text style={[styles.balanceAmount, totalBalance >= 0 ? styles.textGreen : styles.textRed]}>
+            {currencySymbol}{totalBalance.toFixed(2)}
+          </Text>
+        </View>
+
+        {(accounts.length > 0 || defaultBalance !== 0) && (
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false} 
+            style={styles.accountsScroll}
+            contentContainerStyle={styles.accountsScrollContent}
+          >
+            {[{ id: 'default', name: 'Default Account' }, ...accounts].map(account => {
+              const balance = account.id === 'default' ? defaultBalance : (balancesByAccount[account.id] || 0);
+              // Only show default account if there are no other accounts, or if it has a non-zero balance
+              if (account.id === 'default' && accounts.length > 0 && balance === 0) return null;
+              
+              return (
+                <View key={account.id} style={[styles.accountPill, isDarkMode ? styles.bgDarkCard : styles.bgLightCard]}>
+                  <Text style={[styles.accountName, isDarkMode ? styles.textGray400 : styles.textGray500]}>{account.name}</Text>
+                  <Text style={[styles.accountBalance, balance >= 0 ? styles.textGreen : styles.textRed]}>
+                    {currencySymbol}{balance.toFixed(2)}
+                  </Text>
+                </View>
+              );
+            })}
+          </ScrollView>
+        )}
+
+        <View style={styles.rowBetween}>
+          <View style={[styles.halfCard, isDarkMode ? styles.bgDarkCard : styles.bgLightCard]}>
+            <Text style={[styles.cardLabel, isDarkMode ? styles.textGray400 : styles.textGray500]}>Budget (Income)</Text>
+            <Text style={[styles.halfCardAmount, styles.textGreen]}>
+              {currencySymbol}{totalBudget.toFixed(2)}
             </Text>
           </View>
-          <View className={`w-[48%] rounded-2xl p-5 shadow-sm ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
-            <Text className={`text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Expenses</Text>
-            <Text className="text-2xl font-bold text-red-500">
-              ${totalExpenses.toFixed(2)}
+          <View style={[styles.halfCard, isDarkMode ? styles.bgDarkCard : styles.bgLightCard]}>
+            <Text style={[styles.cardLabel, isDarkMode ? styles.textGray400 : styles.textGray500]}>Expenses</Text>
+            <Text style={[styles.halfCardAmount, styles.textRed]}>
+              {currencySymbol}{totalExpenses.toFixed(2)}
             </Text>
           </View>
         </View>
       </View>
 
-      {pieData.length > 0 && (
-        <View className="px-5 mb-4 h-40 items-center justify-center">
-          <VictoryPie
-            height={160}
-            data={pieData}
-            innerRadius={50}
-            colorScale={pieData.map(d => d.color)}
-            labels={() => null} // Hide labels to save space
-            padding={0}
-          />
-        </View>
-      )}
-
-      <View className="flex-1 px-5">
-        <View className="flex-row justify-between items-center mb-4">
-          <Text className={`text-lg font-semibold ${isDarkMode ? 'text-gray-100' : 'text-gray-800'}`}>Recent Transactions</Text>
+      <View style={styles.listContainer}>
+        <View style={styles.listHeader}>
+          <Text style={[styles.listTitle, isDarkMode ? styles.textLight : styles.textDark]}>Recent Transactions</Text>
           <TouchableOpacity 
-            className="bg-blue-500 px-3 py-1.5 rounded-md"
+            style={styles.addButton}
             onPress={() => navigation.navigate('AddTransaction')}
           >
-            <Text className="text-white font-semibold text-sm">+ Add</Text>
+            <Text style={styles.addButtonText}>+ Add</Text>
           </TouchableOpacity>
         </View>
         {isLoading && transactions.length === 0 ? (
-          <ActivityIndicator size="large" color="#3b82f6" className="mt-10" />
+          <ActivityIndicator size="large" color="#3b82f6" style={styles.loader} />
         ) : error ? (
-          <Text className="text-red-500 text-center mt-5">{error}</Text>
+          <Text style={styles.errorText}>{error}</Text>
         ) : transactions.length === 0 ? (
-          <Text className={`text-center mt-10 text-base ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>No transactions found.</Text>
+          <Text style={[styles.emptyText, isDarkMode ? styles.textGray400 : styles.textGray500]}>No transactions found.</Text>
         ) : (
           <FlatList
             data={[...transactions].sort((a, b) => {
-              const dateA = a.date ? new Date(a.date).getTime() : 0;
-              const dateB = b.date ? new Date(b.date).getTime() : 0;
+              const dateA = a.date ? (a.date.toDate ? a.date.toDate().getTime() : new Date(a.date).getTime()) : 0;
+              const dateB = b.date ? (b.date.toDate ? b.date.toDate().getTime() : new Date(b.date).getTime()) : 0;
               return dateB - dateA;
             })}
             keyExtractor={item => item.id}
             renderItem={renderItem}
-            contentContainerStyle={{ paddingBottom: 40 }}
+            contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
           />
         )}
@@ -136,3 +166,96 @@ export default function MainScreen({ navigation }) {
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: { flex: 1 },
+  bgLight: { backgroundColor: '#f3f4f6' },
+  bgDark: { backgroundColor: '#111827' },
+  bgLightCard: { backgroundColor: '#ffffff' },
+  bgDarkCard: { backgroundColor: '#1f2937' },
+  textLight: { color: '#f3f4f6' },
+  textDark: { color: '#111827' },
+  textGray400: { color: '#9ca3af' },
+  textGray500: { color: '#6b7280' },
+  textGreen: { color: '#22c55e' },
+  textRed: { color: '#ef4444' },
+  flex1: { flex: 1 },
+  headerPadding: { padding: 20 },
+  balanceCard: {
+    padding: 20,
+    borderRadius: 16,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  cardLabel: { fontSize: 14, fontWeight: '500', marginBottom: 8 },
+  balanceAmount: { fontSize: 30, fontWeight: 'bold' },
+  reportsLink: { fontSize: 14, color: '#3b82f6', fontWeight: '600' },
+  rowBetween: { flexDirection: 'row', justifyContent: 'space-between' },
+  accountsScroll: {
+    marginBottom: 16,
+  },
+  accountsScrollContent: {
+    paddingRight: 20,
+  },
+  accountPill: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+    marginRight: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
+    minWidth: 120,
+  },
+  accountName: {
+    fontSize: 12,
+    fontWeight: '500',
+    marginBottom: 4,
+  },
+  accountBalance: {
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  halfCard: {
+    width: '48%',
+    padding: 20,
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  halfCardAmount: { fontSize: 24, fontWeight: 'bold' },
+  listContainer: { flex: 1, paddingHorizontal: 20 },
+  listHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+  listTitle: { fontSize: 18, fontWeight: '600' },
+  addButton: { backgroundColor: '#3b82f6', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6 },
+  addButtonText: { color: '#ffffff', fontWeight: '600', fontSize: 14 },
+  loader: { marginTop: 40 },
+  errorText: { color: '#ef4444', textAlign: 'center', marginTop: 20 },
+  emptyText: { textAlign: 'center', marginTop: 40, fontSize: 16 },
+  listContent: { paddingBottom: 40 },
+  transactionCard: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  transactionDesc: { fontSize: 16, fontWeight: '500', marginBottom: 4 },
+  transactionDate: { fontSize: 12, color: '#9ca3af' },
+  transactionAmount: { fontSize: 16, fontWeight: 'bold' },
+});

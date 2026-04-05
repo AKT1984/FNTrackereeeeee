@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Modal, View, Text, TouchableOpacity, FlatList, TextInput, useColorScheme, ActivityIndicator } from 'react-native';
+import { Modal, View, Text, TouchableOpacity, FlatList, TextInput, useColorScheme, ActivityIndicator, StyleSheet } from 'react-native';
 import { useSelector, useDispatch } from 'react-redux';
 import { addCategory } from '../store/modules/categories/action-creators';
 
@@ -32,19 +32,18 @@ export default function CategoryModal({ visible, onClose, onSelect }) {
 
   const renderItem = ({ item }) => (
     <TouchableOpacity 
-      className={`flex-row items-center py-4 border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}
+      style={[styles.itemContainer, isDarkMode ? styles.borderDark : styles.borderLight]}
       onPress={() => {
         onSelect(item);
         onClose();
       }}
     >
       <View 
-        className="w-8 h-8 rounded-full items-center justify-center mr-3" 
-        style={{ backgroundColor: item.color || '#ccc' }}
+        style={[styles.iconContainer, { backgroundColor: item.color || '#ccc' }]}
       >
-        <Text className="text-white text-sm">{item.icon || '📁'}</Text>
+        <Text style={styles.iconText}>{item.icon || '📁'}</Text>
       </View>
-      <Text className={`text-base ${isDarkMode ? 'text-gray-100' : 'text-gray-800'}`}>{item.name}</Text>
+      <Text style={[styles.itemText, isDarkMode ? styles.textLight : styles.textDark]}>{item.name}</Text>
     </TouchableOpacity>
   );
 
@@ -55,17 +54,17 @@ export default function CategoryModal({ visible, onClose, onSelect }) {
       transparent={true}
       onRequestClose={onClose}
     >
-      <View className="flex-1 justify-end bg-black/50">
-        <View className={`rounded-t-3xl p-5 max-h-[80%] ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
-          <View className="flex-row justify-between items-center mb-5">
-            <Text className={`text-xl font-bold ${isDarkMode ? 'text-gray-100' : 'text-gray-900'}`}>
+      <View style={styles.modalOverlay}>
+        <View style={[styles.modalContent, isDarkMode ? styles.bgDarkCard : styles.bgLightCard]}>
+          <View style={styles.modalHeader}>
+            <Text style={[styles.modalTitle, isDarkMode ? styles.textLight : styles.textDark]}>
               {isCreating ? 'New Category' : 'Select Category'}
             </Text>
             <TouchableOpacity onPress={() => {
               if (isCreating) setIsCreating(false);
               else onClose();
             }}>
-              <Text className="text-blue-500 font-semibold text-base">
+              <Text style={styles.closeText}>
                 {isCreating ? 'Cancel' : 'Close'}
               </Text>
             </TouchableOpacity>
@@ -73,9 +72,9 @@ export default function CategoryModal({ visible, onClose, onSelect }) {
           
           {isCreating ? (
             <View>
-              <Text className={`text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Category Name</Text>
+              <Text style={[styles.label, isDarkMode ? styles.textGray300 : styles.textGray700]}>Category Name</Text>
               <TextInput
-                className={`border rounded-lg px-4 py-3 mb-4 text-base ${isDarkMode ? 'bg-gray-900 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'}`}
+                style={[styles.input, isDarkMode ? styles.inputDark : styles.inputLight]}
                 placeholder="e.g. Groceries"
                 placeholderTextColor={isDarkMode ? '#9ca3af' : '#6b7280'}
                 value={name}
@@ -83,60 +82,67 @@ export default function CategoryModal({ visible, onClose, onSelect }) {
                 autoFocus
               />
 
-              <Text className={`text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Color</Text>
-              <View className="flex-row flex-wrap mb-4">
+              <Text style={[styles.label, isDarkMode ? styles.textGray300 : styles.textGray700]}>Color</Text>
+              <View style={styles.colorGrid}>
                 {COLORS.map(color => (
                   <TouchableOpacity
                     key={color}
                     onPress={() => setSelectedColor(color)}
-                    className={`w-10 h-10 rounded-full m-1 items-center justify-center ${selectedColor === color ? 'border-2 border-gray-900 dark:border-white' : ''}`}
-                    style={{ backgroundColor: color }}
+                    style={[
+                      styles.colorCircle, 
+                      { backgroundColor: color },
+                      selectedColor === color && (isDarkMode ? styles.colorSelectedDark : styles.colorSelectedLight)
+                    ]}
                   />
                 ))}
               </View>
 
-              <Text className={`text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Icon</Text>
-              <View className="flex-row flex-wrap mb-6">
+              <Text style={[styles.label, isDarkMode ? styles.textGray300 : styles.textGray700]}>Icon</Text>
+              <View style={styles.iconGrid}>
                 {ICONS.map(icon => (
                   <TouchableOpacity
                     key={icon}
                     onPress={() => setSelectedIcon(icon)}
-                    className={`w-10 h-10 rounded-full m-1 items-center justify-center ${isDarkMode ? 'bg-gray-700' : 'bg-gray-200'} ${selectedIcon === icon ? 'border-2 border-blue-500' : ''}`}
+                    style={[
+                      styles.iconCircle,
+                      isDarkMode ? styles.bgGray700 : styles.bgGray200,
+                      selectedIcon === icon && styles.iconSelected
+                    ]}
                   >
-                    <Text className="text-lg">{icon}</Text>
+                    <Text style={styles.iconEmoji}>{icon}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
 
               <TouchableOpacity 
-                className={`py-4 rounded-lg items-center ${!name.trim() || isLoading ? 'bg-blue-300' : 'bg-blue-500'}`}
+                style={[styles.submitButton, (!name.trim() || isLoading) ? styles.bgBlue300 : styles.bgBlue500]}
                 onPress={handleCreateCategory}
                 disabled={!name.trim() || isLoading}
               >
                 {isLoading ? (
                   <ActivityIndicator color="#fff" />
                 ) : (
-                  <Text className="text-white font-bold text-base">Create Category</Text>
+                  <Text style={styles.submitButtonText}>Create Category</Text>
                 )}
               </TouchableOpacity>
             </View>
           ) : (
             <>
               <TouchableOpacity 
-                className="bg-blue-50 py-3 rounded-lg items-center mb-4 border border-blue-100 dark:bg-blue-900/30 dark:border-blue-800"
+                style={[styles.createButton, isDarkMode ? styles.createButtonDark : styles.createButtonLight]}
                 onPress={() => setIsCreating(true)}
               >
-                <Text className="text-blue-600 dark:text-blue-400 font-semibold">+ Create New Category</Text>
+                <Text style={[styles.createButtonText, isDarkMode ? styles.textBlue400 : styles.textBlue600]}>+ Create New Category</Text>
               </TouchableOpacity>
 
               {categories.length === 0 ? (
-                <Text className={`text-center mt-5 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>No categories available.</Text>
+                <Text style={[styles.emptyText, isDarkMode ? styles.textGray400 : styles.textGray500]}>No categories available.</Text>
               ) : (
                 <FlatList
                   data={categories}
                   keyExtractor={item => item.id}
                   renderItem={renderItem}
-                  contentContainerStyle={{ paddingBottom: 20 }}
+                  contentContainerStyle={styles.listContent}
                 />
               )}
             </>
@@ -146,3 +152,107 @@ export default function CategoryModal({ visible, onClose, onSelect }) {
     </Modal>
   );
 }
+
+const styles = StyleSheet.create({
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  modalContent: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 20,
+    maxHeight: '80%',
+  },
+  bgLightCard: { backgroundColor: '#ffffff' },
+  bgDarkCard: { backgroundColor: '#1f2937' },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  modalTitle: { fontSize: 20, fontWeight: 'bold' },
+  textLight: { color: '#f3f4f6' },
+  textDark: { color: '#111827' },
+  closeText: { color: '#3b82f6', fontWeight: '600', fontSize: 16 },
+  label: { fontSize: 14, fontWeight: '500', marginBottom: 8 },
+  textGray300: { color: '#d1d5db' },
+  textGray700: { color: '#374151' },
+  textGray400: { color: '#9ca3af' },
+  textGray500: { color: '#6b7280' },
+  input: {
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 16,
+    marginBottom: 16,
+  },
+  inputLight: { backgroundColor: '#ffffff', borderColor: '#d1d5db', color: '#111827' },
+  inputDark: { backgroundColor: '#111827', borderColor: '#374151', color: '#ffffff' },
+  colorGrid: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: 16 },
+  colorCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    margin: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  colorSelectedLight: { borderWidth: 2, borderColor: '#111827' },
+  colorSelectedDark: { borderWidth: 2, borderColor: '#ffffff' },
+  iconGrid: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: 24 },
+  iconCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    margin: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bgGray200: { backgroundColor: '#e5e7eb' },
+  bgGray700: { backgroundColor: '#374151' },
+  iconSelected: { borderWidth: 2, borderColor: '#3b82f6' },
+  iconEmoji: { fontSize: 18 },
+  submitButton: {
+    paddingVertical: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  bgBlue500: { backgroundColor: '#3b82f6' },
+  bgBlue300: { backgroundColor: '#93c5fd' },
+  submitButtonText: { color: '#ffffff', fontWeight: 'bold', fontSize: 16 },
+  createButton: {
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginBottom: 16,
+    borderWidth: 1,
+  },
+  createButtonLight: { backgroundColor: '#eff6ff', borderColor: '#dbeafe' },
+  createButtonDark: { backgroundColor: 'rgba(30, 58, 138, 0.3)', borderColor: '#1e40af' },
+  textBlue600: { color: '#2563eb' },
+  textBlue400: { color: '#60a5fa' },
+  emptyText: { textAlign: 'center', marginTop: 20 },
+  listContent: { paddingBottom: 20 },
+  itemContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+  },
+  borderLight: { borderBottomColor: '#e5e7eb' },
+  borderDark: { borderBottomColor: '#374151' },
+  iconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  iconText: { color: '#ffffff', fontSize: 14 },
+  itemText: { fontSize: 16 },
+});

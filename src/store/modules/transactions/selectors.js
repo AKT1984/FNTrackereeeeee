@@ -25,3 +25,22 @@ export const selectTotalBalance = createSelector(
   [selectTotalBudget, selectTotalExpenses],
   (budget, expenses) => budget - expenses
 );
+
+export const selectBalancesByAccount = createSelector(
+  [selectTransactions],
+  (transactions) => {
+    return transactions.reduce((acc, t) => {
+      const accountId = t.accountId || 'default';
+      if (!acc[accountId]) {
+        acc[accountId] = 0;
+      }
+      const amount = Number(t.amount) || 0;
+      if (t.type === 'INCOME') {
+        acc[accountId] += amount;
+      } else if (t.type === 'EXPENSE') {
+        acc[accountId] -= amount;
+      }
+      return acc;
+    }, {});
+  }
+);

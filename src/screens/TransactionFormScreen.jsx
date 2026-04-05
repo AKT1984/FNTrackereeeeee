@@ -1,16 +1,30 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   View, Text, TextInput, TouchableOpacity, 
-  KeyboardAvoidingView, Platform, ScrollView, useColorScheme, ActivityIndicator 
+  KeyboardAvoidingView, Platform, ScrollView, useColorScheme, ActivityIndicator, StyleSheet 
 } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { addTransaction, updateTransaction, deleteTransaction } from '../store/modules/transactions/action-creators';
 import CategoryModal from '../components/CategoryModal';
+import AccountModal from '../components/AccountModal';
+
+const CURRENCY_SYMBOLS = {
+  USD: '$',
+  EUR: '€',
+  GBP: '£',
+  JPY: '¥',
+  MDL: 'L',
+  RUB: '₽',
+  UAH: '₴',
+};
 
 export default function TransactionFormScreen({ route, navigation }) {
   const dispatch = useDispatch();
   const isDarkMode = useColorScheme() === 'dark';
   const isLoading = useSelector(state => state.transactions.isLoading);
+  const user = useSelector(state => state.auth.user);
+  const accounts = useSelector(state => state.accounts.accounts || []);
+  const currencySymbol = CURRENCY_SYMBOLS[user?.currency || 'USD'] || '$';
   
   const transaction = route.params?.transaction;
   const isEditing = !!transaction;
@@ -19,7 +33,17 @@ export default function TransactionFormScreen({ route, navigation }) {
   const [description, setDescription] = useState(transaction ? transaction.description : '');
   const [type, setType] = useState(transaction ? transaction.type : 'EXPENSE');
   const [category, setCategory] = useState(transaction ? { id: transaction.categoryId, name: 'Selected Category' } : null);
+  
+  // Find the account object if editing, otherwise default to the first account if available
+  const defaultAccount = accounts.length > 0 ? accounts[0] : null;
+  const initialAccount = transaction && transaction.accountId 
+    ? accounts.find(a => a.id === transaction.accountId) || { id: transaction.accountId, name: 'Selected Account' }
+    : defaultAccount;
+    
+  const [account, setAccount] = useState(initialAccount);
+  
   const [isCategoryModalVisible, setCategoryModalVisible] = useState(false);
+  const [isAccountModalVisible, setAccountModalVisible] = useState(false);
 
   const descInputRef = useRef(null);
 
@@ -40,7 +64,7 @@ export default function TransactionFormScreen({ route, navigation }) {
       description: description.trim(),
       type,
       categoryId: category.id,
-      date: transaction ? transaction.date : new Date().toISOString(),
+      accountId: account ? account.id : null,
     };
 
     if (isEditing) {
@@ -61,29 +85,29 @@ export default function TransactionFormScreen({ route, navigation }) {
 
   return (
     <KeyboardAvoidingView 
-      className={`flex-1 ${isDarkMode ? 'bg-gray-900' : 'bg-gray-100'}`}
+      style={[styles.container, isDarkMode ? styles.bgDark : styles.bgLight]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <ScrollView contentContainerStyle={{ padding: 20 }}>
-        <View className="flex-row mb-5 bg-gray-200 dark:bg-gray-800 rounded-lg p-1">
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        <View style={[styles.typeSelector, isDarkMode ? styles.bgDarkCard : styles.bgGray200]}>
           <TouchableOpacity 
-            className={`flex-1 py-2.5 items-center rounded-md ${type === 'EXPENSE' ? 'bg-red-500' : 'bg-transparent'}`}
+            style={[styles.typeButton, type === 'EXPENSE' ? styles.bgRed : styles.bgTransparent]}
             onPress={() => setType('EXPENSE')}
           >
-            <Text className={`text-base font-semibold ${type === 'EXPENSE' ? 'text-white' : 'text-gray-500 dark:text-gray-400'}`}>Expense</Text>
+            <Text style={[styles.typeText, type === 'EXPENSE' ? styles.textWhite : (isDarkMode ? styles.textGray400 : styles.textGray500)]}>Expense</Text>
           </TouchableOpacity>
           <TouchableOpacity 
-            className={`flex-1 py-2.5 items-center rounded-md ${type === 'INCOME' ? 'bg-green-500' : 'bg-transparent'}`}
+            style={[styles.typeButton, type === 'INCOME' ? styles.bgGreen : styles.bgTransparent]}
             onPress={() => setType('INCOME')}
           >
-            <Text className={`text-base font-semibold ${type === 'INCOME' ? 'text-white' : 'text-gray-500 dark:text-gray-400'}`}>Income</Text>
+            <Text style={[styles.typeText, type === 'INCOME' ? styles.textWhite : (isDarkMode ? styles.textGray400 : styles.textGray500)]}>Income</Text>
           </TouchableOpacity>
         </View>
 
-        <View className="mb-5">
-          <Text className={`text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Amount *</Text>
+        <View style={styles.inputGroup}>
+          <Text style={[styles.label, isDarkMode ? styles.textGray300 : styles.textGray700]}>Amount ({currencySymbol}) *</Text>
           <TextInput
-            className={`border rounded-lg px-4 py-3 text-base ${isDarkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'}`}
+            style={[styles.input, isDarkMode ? styles.inputDark : styles.inputLight]}
             placeholder="0.00"
             placeholderTextColor={isDarkMode ? '#9ca3af' : '#6b7280'}
             keyboardType="numeric"
@@ -95,11 +119,11 @@ export default function TransactionFormScreen({ route, navigation }) {
           />
         </View>
 
-        <View className="mb-5">
-          <Text className={`text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Description (Optional)</Text>
+        <View style={styles.inputGroup}>
+          <Text style={[styles.label, isDarkMode ? styles.textGray300 : styles.textGray700]}>Description (Optional)</Text>
           <TextInput
             ref={descInputRef}
-            className={`border rounded-lg px-4 py-3 text-base ${isDarkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'}`}
+            style={[styles.input, isDarkMode ? styles.inputDark : styles.inputLight]}
             placeholder="What was this for?"
             placeholderTextColor={isDarkMode ? '#9ca3af' : '#6b7280'}
             value={description}
@@ -108,37 +132,49 @@ export default function TransactionFormScreen({ route, navigation }) {
           />
         </View>
 
-        <View className="mb-5">
-          <Text className={`text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Category *</Text>
+        <View style={styles.inputGroup}>
+          <Text style={[styles.label, isDarkMode ? styles.textGray300 : styles.textGray700]}>Account</Text>
           <TouchableOpacity 
-            className={`border rounded-lg px-4 py-3.5 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-300'}`}
+            style={[styles.categorySelector, isDarkMode ? styles.inputDark : styles.inputLight]}
+            onPress={() => setAccountModalVisible(true)}
+          >
+            <Text style={[styles.categoryText, account ? (isDarkMode ? styles.textWhite : styles.textGray900) : (isDarkMode ? styles.textGray400 : styles.textGray500)]}>
+              {account ? account.name : 'Default Account'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.inputGroup}>
+          <Text style={[styles.label, isDarkMode ? styles.textGray300 : styles.textGray700]}>Category *</Text>
+          <TouchableOpacity 
+            style={[styles.categorySelector, isDarkMode ? styles.inputDark : styles.inputLight]}
             onPress={() => setCategoryModalVisible(true)}
           >
-            <Text className={`text-base ${category ? (isDarkMode ? 'text-white' : 'text-gray-900') : (isDarkMode ? 'text-gray-400' : 'text-gray-500')}`}>
+            <Text style={[styles.categoryText, category ? (isDarkMode ? styles.textWhite : styles.textGray900) : (isDarkMode ? styles.textGray400 : styles.textGray500)]}>
               {category ? category.name : 'Select a Category'}
             </Text>
           </TouchableOpacity>
         </View>
 
         <TouchableOpacity 
-          className={`py-4 rounded-lg items-center mt-2 ${!isValid || isLoading ? 'bg-blue-300 dark:bg-blue-800' : 'bg-blue-500'}`}
+          style={[styles.submitButton, (!isValid || isLoading) ? (isDarkMode ? styles.bgBlue800 : styles.bgBlue300) : styles.bgBlue500]}
           onPress={handleSubmit}
           disabled={!isValid || isLoading}
         >
           {isLoading ? (
             <ActivityIndicator color="#ffffff" />
           ) : (
-            <Text className="text-white text-base font-bold">{isEditing ? 'Save Changes' : 'Add Transaction'}</Text>
+            <Text style={styles.submitButtonText}>{isEditing ? 'Save Changes' : `Add Transaction (${currencySymbol})`}</Text>
           )}
         </TouchableOpacity>
 
         {isEditing && (
           <TouchableOpacity 
-            className="py-4 rounded-lg items-center mt-3 border border-red-500 bg-transparent"
+            style={styles.deleteButton}
             onPress={handleDelete}
             disabled={isLoading}
           >
-            <Text className="text-red-500 text-base font-bold">Delete Transaction</Text>
+            <Text style={styles.deleteButtonText}>Delete Transaction</Text>
           </TouchableOpacity>
         )}
 
@@ -149,6 +185,81 @@ export default function TransactionFormScreen({ route, navigation }) {
         onClose={() => setCategoryModalVisible(false)} 
         onSelect={setCategory} 
       />
+      
+      <AccountModal 
+        visible={isAccountModalVisible} 
+        onClose={() => setAccountModalVisible(false)} 
+        onSelect={setAccount} 
+      />
     </KeyboardAvoidingView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: { flex: 1 },
+  bgLight: { backgroundColor: '#f3f4f6' },
+  bgDark: { backgroundColor: '#111827' },
+  bgGray200: { backgroundColor: '#e5e7eb' },
+  bgDarkCard: { backgroundColor: '#1f2937' },
+  bgRed: { backgroundColor: '#ef4444' },
+  bgGreen: { backgroundColor: '#22c55e' },
+  bgBlue500: { backgroundColor: '#3b82f6' },
+  bgBlue300: { backgroundColor: '#93c5fd' },
+  bgBlue800: { backgroundColor: '#1e40af' },
+  bgTransparent: { backgroundColor: 'transparent' },
+  textWhite: { color: '#ffffff' },
+  textGray300: { color: '#d1d5db' },
+  textGray400: { color: '#9ca3af' },
+  textGray500: { color: '#6b7280' },
+  textGray700: { color: '#374151' },
+  textGray900: { color: '#111827' },
+  scrollContent: { padding: 20 },
+  typeSelector: {
+    flexDirection: 'row',
+    marginBottom: 20,
+    borderRadius: 8,
+    padding: 4,
+  },
+  typeButton: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: 'center',
+    borderRadius: 6,
+  },
+  typeText: { fontSize: 16, fontWeight: '600' },
+  inputGroup: { marginBottom: 20 },
+  label: { fontSize: 14, fontWeight: '500', marginBottom: 8 },
+  input: {
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 16,
+  },
+  inputLight: { backgroundColor: '#ffffff', borderColor: '#d1d5db', color: '#111827' },
+  inputDark: { backgroundColor: '#1f2937', borderColor: '#374151', color: '#ffffff' },
+  categorySelector: {
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  categoryText: { fontSize: 16 },
+  submitButton: {
+    paddingVertical: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  submitButtonText: { color: '#ffffff', fontSize: 16, fontWeight: 'bold' },
+  deleteButton: {
+    paddingVertical: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: '#ef4444',
+    backgroundColor: 'transparent',
+  },
+  deleteButtonText: { color: '#ef4444', fontSize: 16, fontWeight: 'bold' },
+});

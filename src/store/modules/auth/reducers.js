@@ -36,6 +36,15 @@ export default function authReducer(state = initialState, action) {
     case types.LOGOUT_ERROR:
       return { ...state, isLoading: false, error: action.payload };
       
+    case types.UPDATE_CURRENCY_SUCCESS:
+      return {
+        ...state,
+        user: {
+          ...state.user,
+          currency: action.payload,
+        },
+      };
+
     default:
       return state;
   }

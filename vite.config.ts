@@ -7,8 +7,8 @@ import { transform } from 'esbuild';
 
 const codegenFixPlugin = () => ({
   name: 'codegen-fix',
-  enforce: 'pre',
-  resolveId(id) {
+  enforce: 'pre' as const,
+  resolveId(id: string) {
     if (id.includes('codegenNativeComponent')) {
       return path.resolve(__dirname, 'src/mocks/codegenNativeComponent.js');
     }
@@ -20,8 +20,8 @@ const codegenFixPlugin = () => ({
 
 const victoryNativeJsxPlugin = () => ({
   name: 'victory-native-jsx',
-  enforce: 'pre',
-  async transform(code, id) {
+  enforce: 'pre' as const,
+  async transform(code: string, id: string) {
     if (id.includes('victory-native') && id.endsWith('.js')) {
       const result = await transform(code, {
         loader: 'jsx',
@@ -53,11 +53,34 @@ export default defineConfig(({mode}) => {
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
+        'victory-native': 'victory',
       },
+      extensions: [
+        '.web.tsx',
+        '.web.ts',
+        '.web.jsx',
+        '.web.js',
+        '.tsx',
+        '.ts',
+        '.jsx',
+        '.js',
+        '.json',
+      ],
     },
     optimizeDeps: {
       include: ['victory-native'],
       esbuildOptions: {
+        resolveExtensions: [
+          '.web.tsx',
+          '.web.ts',
+          '.web.jsx',
+          '.web.js',
+          '.tsx',
+          '.ts',
+          '.jsx',
+          '.js',
+          '.json',
+        ],
         loader: {
           '.js': 'jsx',
         },

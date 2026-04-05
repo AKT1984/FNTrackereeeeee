@@ -35,10 +35,23 @@
         "amount": { "type": "number" },
         "type": { "type": "string", "enum": ["INCOME", "EXPENSE"] },
         "categoryId": { "type": "string" },
+        "accountId": { "type": ["string", "null"] },
         "date": { "type": "string", "format": "date-time" },
         "description": { "type": "string" }
       },
       "required": ["id", "userId", "amount", "type", "categoryId", "date", "description"]
+    },
+    "Account": {
+      "title": "Account",
+      "description": "User financial accounts.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "userId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "userId", "createdAt"]
     }
   },
   "firestore": {
@@ -53,6 +66,10 @@
     "/transactions/{transactionId}": {
       "schema": { "$ref": "#/entities/Transaction" },
       "description": "Transactions collection"
+    },
+    "/accounts/{accountId}": {
+      "schema": { "$ref": "#/entities/Account" },
+      "description": "Accounts collection"
     }
   }
 }

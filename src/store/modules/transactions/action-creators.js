@@ -1,4 +1,4 @@
-import { getDocs, addDoc, setDoc, deleteDoc, query, where, onSnapshot } from 'firebase/firestore';
+import { getDocs, addDoc, setDoc, deleteDoc, query, where, onSnapshot, doc, serverTimestamp } from 'firebase/firestore';
 import * as actions from './actions';
 import * as routes from './routes';
 import { auth } from '../../../firebase';
@@ -58,16 +58,16 @@ export const addTransaction = (transactionData) => async (dispatch) => {
     const userId = auth.currentUser?.uid;
     if (!userId) throw new Error('User not authenticated');
 
+    const docRef = doc(routes.getTransactionsCollection());
+    
     const newTransaction = {
       ...transactionData,
+      id: docRef.id,
       userId,
+      date: transactionData.date || serverTimestamp(),
     };
 
-    // Use addDoc to let Firestore generate the ID
-    const docRef = await addDoc(routes.getTransactionsCollection(), newTransaction);
-    
-    // Update the document to include its generated ID to match the schema strictly
-    await setDoc(docRef, { id: docRef.id }, { merge: true });
+    await setDoc(docRef, newTransaction);
     
     // Success is handled by onSnapshot subscription
   } catch (error) {

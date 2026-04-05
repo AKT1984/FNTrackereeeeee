@@ -6,6 +6,7 @@ import { PersistGate } from 'redux-persist/integration/react';
 import store, { persistor } from './store';
 import AppNavigator from './navigation/AppNavigator';
 import { initAuthListener, loginWithGoogle } from './store/modules/auth/action-creators';
+import ErrorBoundary from './components/ErrorBoundary';
 
 function AppContent() {
   const dispatch = useDispatch();
@@ -46,7 +47,9 @@ export default function App() {
     <SafeAreaProvider>
       <Provider store={store}>
         <PersistGate loading={null} persistor={persistor}>
-          <AppContent />
+          <ErrorBoundary>
+            <AppContent />
+          </ErrorBoundary>
         </PersistGate>
       </Provider>
     </SafeAreaProvider>
