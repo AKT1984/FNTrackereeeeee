@@ -33,7 +33,13 @@ export const initAuthListener = () => (dispatch) => {
   // Check for redirect result first to catch any errors from signInWithRedirect
   getRedirectResult(auth).catch((error) => {
     console.error("Redirect login error:", error);
-    dispatch(actions.loginError(error.message));
+    if (error.code === 'auth/unauthorized-domain') {
+      const domain = window.location.hostname;
+      const msg = `Domain '${domain}' is not authorized. Please go to Firebase Console -> Authentication -> Settings -> Authorized domains and add '${domain}'. Alternatively, access the app via 'localhost' instead of '127.0.0.1'.`;
+      dispatch(actions.loginError(msg));
+    } else {
+      dispatch(actions.loginError(error.message));
+    }
   });
 
   return onAuthStateChanged(auth, async (user) => {
@@ -88,7 +94,17 @@ export const loginWithGoogle = () => async (dispatch) => {
     // If running locally, prefer redirect to avoid popup blockers and COOP issues
     if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
       console.log("Running locally, using redirect...");
-      await signInWithRedirect(auth, provider);
+      try {
+        await signInWithRedirect(auth, provider);
+      } catch (redirectError) {
+        if (redirectError.code === 'auth/unauthorized-domain') {
+          const domain = window.location.hostname;
+          const msg = `Domain '${domain}' is not authorized. Please go to Firebase Console -> Authentication -> Settings -> Authorized domains and add '${domain}'. Alternatively, access the app via 'localhost' instead of '127.0.0.1'.`;
+          dispatch(actions.loginError(msg));
+        } else {
+          dispatch(actions.loginError(redirectError.message));
+        }
+      }
       return;
     }
 
@@ -118,7 +134,13 @@ export const loginWithGoogle = () => async (dispatch) => {
     try {
       await signInWithRedirect(auth, provider);
     } catch (redirectError) {
-      dispatch(actions.loginError(redirectError.message));
+      if (redirectError.code === 'auth/unauthorized-domain') {
+        const domain = window.location.hostname;
+        const msg = `Domain '${domain}' is not authorized. Please go to Firebase Console -> Authentication -> Settings -> Authorized domains and add '${domain}'.`;
+        dispatch(actions.loginError(msg));
+      } else {
+        dispatch(actions.loginError(redirectError.message));
+      }
     }
   }
 };

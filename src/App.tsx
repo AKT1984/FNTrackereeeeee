@@ -10,7 +10,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 
 function AppContent() {
   const dispatch = useDispatch();
-  const { isAuthenticated, isLoading } = useSelector((state: any) => state.auth);
+  const { isAuthenticated, isLoading, error } = useSelector((state: any) => state.auth);
 
   useEffect(() => {
     dispatch(initAuthListener() as any);
@@ -29,6 +29,13 @@ function AppContent() {
       <View style={styles.center}>
         <Text style={styles.title}>FinTrack RN</Text>
         <Text style={styles.subtitle}>Your Personal Finance Tracker</Text>
+        
+        {error && (
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        )}
+
         <TouchableOpacity 
           style={styles.loginButton} 
           onPress={() => dispatch(loginWithGoogle() as any)}
@@ -93,5 +100,17 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  errorContainer: {
+    backgroundColor: '#fee2e2',
+    padding: 16,
+    borderRadius: 8,
+    marginBottom: 24,
+    maxWidth: '80%',
+  },
+  errorText: {
+    color: '#ef4444',
+    fontSize: 14,
+    textAlign: 'center',
   }
 });
