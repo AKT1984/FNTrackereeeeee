@@ -37,6 +37,8 @@ export const initAuthListener = () => (dispatch) => {
       const domain = window.location.hostname;
       const msg = `Domain '${domain}' is not authorized. Please go to Firebase Console -> Authentication -> Settings -> Authorized domains and add '${domain}'. Alternatively, access the app via 'localhost' instead of '127.0.0.1'.`;
       dispatch(actions.loginError(msg));
+    } else if (error.message?.includes('missing initial state')) {
+      dispatch(actions.loginError("Login failed due to browser privacy settings blocking third-party cookies. Please use 'localhost' instead of '127.0.0.1' or enable third-party cookies."));
     } else {
       dispatch(actions.loginError(error.message));
     }
@@ -91,23 +93,6 @@ export const initAuthListener = () => (dispatch) => {
 export const loginWithGoogle = () => async (dispatch) => {
   dispatch(actions.loginRequest());
   try {
-    // If running locally, prefer redirect to avoid popup blockers and COOP issues
-    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-      console.log("Running locally, using redirect...");
-      try {
-        await signInWithRedirect(auth, provider);
-      } catch (redirectError) {
-        if (redirectError.code === 'auth/unauthorized-domain') {
-          const domain = window.location.hostname;
-          const msg = `Domain '${domain}' is not authorized. Please go to Firebase Console -> Authentication -> Settings -> Authorized domains and add '${domain}'. Alternatively, access the app via 'localhost' instead of '127.0.0.1'.`;
-          dispatch(actions.loginError(msg));
-        } else {
-          dispatch(actions.loginError(redirectError.message));
-        }
-      }
-      return;
-    }
-
     const result = await signInWithPopup(auth, provider);
     
     let currency = 'USD';
@@ -130,17 +115,35 @@ export const loginWithGoogle = () => async (dispatch) => {
     }));
   } catch (error) {
     console.error("Login error:", error);
-    console.log("Popup failed, falling back to redirect...");
-    try {
-      await signInWithRedirect(auth, provider);
-    } catch (redirectError) {
-      if (redirectError.code === 'auth/unauthorized-domain') {
-        const domain = window.location.hostname;
-        const msg = `Domain '${domain}' is not authorized. Please go to Firebase Console -> Authentication -> Settings -> Authorized domains and add '${domain}'.`;
-        dispatch(actions.loginError(msg));
-      } else {
-        dispatch(actions.loginError(redirectError.message));
+    
+    if (error.code === 'auth/unauthorized-domain') {
+      const domain = window.location.hostname;
+      const msg = `Domain '${domain}' is not authorized. Please go to Firebase Console -> Authentication -> Settings -> Authorized domains and add '${domain}'. Alternatively, access the app via 'localhost' instead of '127.0.0.1'.`;
+      dispatch(actions.loginError(msg));
+      return;
+    }
+
+    // If popup is blocked or closed, fallback to redirect
+    if (
+      error.code === 'auth/popup-blocked' ||
+      error.code === 'auth/popup-closed-by-user' || 
+      error.code === 'auth/cross-origin-opener-policy-failed' ||
+      error.message?.includes('Cross-Origin-Opener-Policy')
+    ) {
+      console.log("Popup failed, falling back to redirect...");
+      try {
+        await signInWithRedirect(auth, provider);
+      } catch (redirectError) {
+        if (redirectError.code === 'auth/unauthorized-domain') {
+          const domain = window.location.hostname;
+          const msg = `Domain '${domain}' is not authorized. Please go to Firebase Console -> Authentication -> Settings -> Authorized domains and add '${domain}'.`;
+          dispatch(actions.loginError(msg));
+        } else {
+          dispatch(actions.loginError(redirectError.message));
+        }
       }
+    } else {
+      dispatch(actions.loginError(error.message));
     }
   }
 };
