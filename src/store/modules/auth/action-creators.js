@@ -85,6 +85,13 @@ export const initAuthListener = () => (dispatch) => {
 export const loginWithGoogle = () => async (dispatch) => {
   dispatch(actions.loginRequest());
   try {
+    // If running locally, prefer redirect to avoid popup blockers and COOP issues
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      console.log("Running locally, using redirect...");
+      await signInWithRedirect(auth, provider);
+      return;
+    }
+
     const result = await signInWithPopup(auth, provider);
     
     let currency = 'USD';
@@ -107,21 +114,11 @@ export const loginWithGoogle = () => async (dispatch) => {
     }));
   } catch (error) {
     console.error("Login error:", error);
-    // If popup is blocked or closed, fallback to redirect
-    if (
-      error.code === 'auth/popup-blocked' ||
-      error.code === 'auth/popup-closed-by-user' || 
-      error.code === 'auth/cross-origin-opener-policy-failed' ||
-      error.message?.includes('Cross-Origin-Opener-Policy')
-    ) {
-      console.log("Popup failed, falling back to redirect...");
-      try {
-        await signInWithRedirect(auth, provider);
-      } catch (redirectError) {
-        dispatch(actions.loginError(redirectError.message));
-      }
-    } else {
-      dispatch(actions.loginError(error.message));
+    console.log("Popup failed, falling back to redirect...");
+    try {
+      await signInWithRedirect(auth, provider);
+    } catch (redirectError) {
+      dispatch(actions.loginError(redirectError.message));
     }
   }
 };
