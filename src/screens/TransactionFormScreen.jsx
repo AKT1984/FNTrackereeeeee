@@ -29,6 +29,7 @@ export default function TransactionFormScreen({ route, navigation }) {
   const isLoading = useSelector(state => state.transactions.isLoading);
   const user = useSelector(state => state.auth.user);
   const accounts = useSelector(state => state.accounts.accounts || []);
+  const categories = useSelector(state => state.categories.categories || []);
   
   const transaction = route.params?.transaction;
   const isEditing = !!transaction;
@@ -46,7 +47,11 @@ export default function TransactionFormScreen({ route, navigation }) {
   const [currency, setCurrency] = useState(transaction?.originalCurrency || baseCurrency);
   const [description, setDescription] = useState(transaction ? transaction.description : '');
   const [type, setType] = useState(transaction ? transaction.type : 'EXPENSE');
-  const [category, setCategory] = useState(transaction ? { id: transaction.categoryId, name: 'Selected Category' } : null);
+  
+  const initialCategory = transaction && transaction.categoryId
+    ? categories.find(c => c.id === transaction.categoryId) || { id: transaction.categoryId, name: 'Selected Category' }
+    : null;
+  const [category, setCategory] = useState(initialCategory);
   
   // Update currency when account changes if not editing
   useEffect(() => {
@@ -217,7 +222,7 @@ export default function TransactionFormScreen({ route, navigation }) {
             onPress={() => setAccountModalVisible(true)}
           >
             <Text style={[styles.categoryText, account ? (isDarkMode ? styles.textWhite : styles.textGray900) : (isDarkMode ? styles.textGray400 : styles.textGray500)]}>
-              {account ? account.name : 'Default Account'}
+              {account ? (accounts.find(a => a.id === account.id)?.name || account.name) : 'Default Account'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -229,7 +234,7 @@ export default function TransactionFormScreen({ route, navigation }) {
             onPress={() => setCategoryModalVisible(true)}
           >
             <Text style={[styles.categoryText, category ? (isDarkMode ? styles.textWhite : styles.textGray900) : (isDarkMode ? styles.textGray400 : styles.textGray500)]}>
-              {category ? category.name : 'Select a Category'}
+              {category ? (categories.find(c => c.id === category.id)?.name || category.name) : 'Select a Category'}
             </Text>
           </TouchableOpacity>
         </View>

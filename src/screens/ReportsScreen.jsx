@@ -4,6 +4,7 @@ import { useSelector } from 'react-redux';
 import { VictoryPie, VictoryBar, VictoryChart, VictoryAxis, VictoryGroup, VictoryLegend } from 'victory-native';
 import { selectTotalBudget, selectTotalExpenses, selectTotalBalance, selectTransactions } from '../store/modules/transactions/selectors';
 import { useAppTheme } from '../hooks/useAppTheme';
+import { useExchangeRates } from '../hooks/useExchangeRates';
 
 import { formatCurrency, getDateFromTimestamp } from '../utils/format';
 
@@ -24,15 +25,36 @@ export default function ReportsScreen() {
   const transactions = useSelector(selectTransactions);
   const categories = useSelector(state => state.categories.categories || []);
   const accounts = useSelector(state => state.accounts.accounts || []);
-  const totalBudget = useSelector(selectTotalBudget);
-  const totalExpenses = useSelector(selectTotalExpenses);
-  const totalBalance = useSelector(selectTotalBalance);
+  
+  const { convertAmountToUserCurrency } = useExchangeRates();
+
+  const totalBudget = React.useMemo(() => {
+    return transactions
+      .filter(t => t.type === 'INCOME')
+      .reduce((sum, t) => {
+        const cur = accounts.find(a => a.id === t.accountId)?.currency || t.originalCurrency || 'USD';
+        return sum + convertAmountToUserCurrency(t.amount, cur);
+      }, 0);
+  }, [transactions, accounts, convertAmountToUserCurrency]);
+
+  const totalExpenses = React.useMemo(() => {
+    return transactions
+      .filter(t => t.type === 'EXPENSE')
+      .reduce((sum, t) => {
+        const cur = accounts.find(a => a.id === t.accountId)?.currency || t.originalCurrency || 'USD';
+        return sum + convertAmountToUserCurrency(t.amount, cur);
+      }, 0);
+  }, [transactions, accounts, convertAmountToUserCurrency]);
+
+  const totalBalance = totalBudget - totalExpenses;
 
   // Process data for Pie Chart (Expenses by Category)
   const pieData = useMemo(() => {
     const expenses = transactions.filter(t => t.type === 'EXPENSE');
     const expensesByCategory = expenses.reduce((acc, curr) => {
-      acc[curr.categoryId] = (acc[curr.categoryId] || 0) + (Number(curr.amount) || 0);
+      const cur = accounts.find(a => a.id === curr.accountId)?.currency || curr.originalCurrency || 'USD';
+      const convertedAmt = convertAmountToUserCurrency(curr.amount, cur);
+      acc[curr.categoryId] = (acc[curr.categoryId] || 0) + convertedAmt;
       return acc;
     }, {});
 
@@ -56,14 +78,17 @@ export default function ReportsScreen() {
       const date = getDateFromTimestamp(t.date);
       const monthYear = `${date.toLocaleString('default', { month: 'short' })} ${date.getFullYear()}`;
       
+      const cur = accounts.find(a => a.id === t.accountId)?.currency || t.originalCurrency || 'USD';
+      const convertedAmt = convertAmountToUserCurrency(t.amount, cur);
+
       if (!monthlyData[monthYear]) {
         monthlyData[monthYear] = { month: monthYear, income: 0, expense: 0, timestamp: date.getTime() };
       }
       
       if (t.type === 'INCOME') {
-        monthlyData[monthYear].income += Number(t.amount) || 0;
+        monthlyData[monthYear].income += convertedAmt;
       } else {
-        monthlyData[monthYear].expense += Number(t.amount) || 0;
+        monthlyData[monthYear].expense += convertedAmt;
       }
     });
 

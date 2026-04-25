@@ -17,6 +17,7 @@ export default function SubscriptionFormScreen({ route, navigation }) {
   const isLoading = useSelector(state => state.subscriptions.isLoading);
   const user = useSelector(state => state.auth.user);
   const accounts = useSelector(state => state.accounts.accounts || []);
+  const categories = useSelector(state => state.categories.categories || []);
   
   const subscription = route.params?.subscription;
   const isEditing = !!subscription;
@@ -33,7 +34,11 @@ export default function SubscriptionFormScreen({ route, navigation }) {
   const [amount, setAmount] = useState(subscription ? String(subscription.amount) : '');
   const [frequency, setFrequency] = useState(subscription ? subscription.frequency : 'MONTHLY');
   const [notifyDaysBefore, setNotifyDaysBefore] = useState(subscription ? String(subscription.notifyDaysBefore) : '3');
-  const [category, setCategory] = useState(subscription ? { id: subscription.categoryId, name: 'Selected Category' } : null);
+  
+  const initialCategory = subscription && subscription.categoryId
+    ? categories.find(c => c.id === subscription.categoryId) || { id: subscription.categoryId, name: 'Selected Category' }
+    : null;
+  const [category, setCategory] = useState(initialCategory);
   
   const [isCategoryModalVisible, setCategoryModalVisible] = useState(false);
   const [isAccountModalVisible, setAccountModalVisible] = useState(false);
@@ -165,7 +170,7 @@ export default function SubscriptionFormScreen({ route, navigation }) {
             onPress={() => setAccountModalVisible(true)}
           >
             <Text style={[styles.selectorText, account ? (isDarkMode ? styles.textWhite : styles.textGray900) : (isDarkMode ? styles.textGray400 : styles.textGray500)]}>
-              {account ? account.name : 'Select Account'}
+              {account ? (accounts.find(a => a.id === account.id)?.name || account.name) : 'Select Account'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -177,7 +182,7 @@ export default function SubscriptionFormScreen({ route, navigation }) {
             onPress={() => setCategoryModalVisible(true)}
           >
             <Text style={[styles.selectorText, category ? (isDarkMode ? styles.textWhite : styles.textGray900) : (isDarkMode ? styles.textGray400 : styles.textGray500)]}>
-              {category ? category.name : 'Select a Category'}
+              {category ? (categories.find(c => c.id === category.id)?.name || category.name) : 'Select a Category'}
             </Text>
           </TouchableOpacity>
         </View>

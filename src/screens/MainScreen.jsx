@@ -7,6 +7,7 @@ import { subscribeToAccounts } from '../store/modules/accounts/thunks';
 import { selectTotalBudget, selectTotalExpenses, selectTotalBalance, selectTransactions, selectBalancesByAccount } from '../store/modules/transactions/selectors';
 import { useAppTheme } from '../hooks/useAppTheme';
 import { formatCurrency, getDateFromTimestamp } from '../utils/format';
+import { useExchangeRates } from '../hooks/useExchangeRates';
 
 const CURRENCY_SYMBOLS = {
   USD: '$',
@@ -30,13 +31,32 @@ export default function MainScreen({ navigation }) {
   const error = useSelector(state => state.transactions.error);
   const categories = useSelector(state => state.categories.categories || []);
   const accounts = useSelector(state => state.accounts.accounts || []);
-  
-  const totalBudget = useSelector(selectTotalBudget);
-  const totalExpenses = useSelector(selectTotalExpenses);
-  const totalBalance = useSelector(selectTotalBalance);
   const balancesByAccount = useSelector(selectBalancesByAccount);
 
+  const { convertAmountToUserCurrency } = useExchangeRates();
+
+  const totalBudget = React.useMemo(() => {
+    return transactions
+      .filter(t => t.type === 'INCOME')
+      .reduce((sum, t) => {
+        const cur = accounts.find(a => a.id === t.accountId)?.currency || t.originalCurrency || 'USD';
+        return sum + convertAmountToUserCurrency(t.amount, cur);
+      }, 0);
+  }, [transactions, accounts, convertAmountToUserCurrency]);
+
+  const totalExpenses = React.useMemo(() => {
+    return transactions
+      .filter(t => t.type === 'EXPENSE')
+      .reduce((sum, t) => {
+        const cur = accounts.find(a => a.id === t.accountId)?.currency || t.originalCurrency || 'USD';
+        return sum + convertAmountToUserCurrency(t.amount, cur);
+      }, 0);
+  }, [transactions, accounts, convertAmountToUserCurrency]);
+
+  const totalBalance = totalBudget - totalExpenses;
+
   // Calculate default balance including any transactions from deleted accounts
+
   const defaultBalance = Object.keys(balancesByAccount).reduce((sum, accId) => {
     if (accId === 'default' || !accounts.find(a => a.id === accId)) {
       return sum + balancesByAccount[accId];
