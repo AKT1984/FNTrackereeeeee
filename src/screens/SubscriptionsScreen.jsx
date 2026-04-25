@@ -88,39 +88,55 @@ export default function SubscriptionsScreen({ navigation }) {
     );
   };
 
+  const renderHeader = () => (
+    <View style={styles.header}>
+      <Text style={[styles.title, isDarkMode ? styles.textLight : styles.textDark]}>Subscriptions</Text>
+      <TouchableOpacity 
+        style={styles.addButton}
+        onPress={() => navigation.navigate('SubscriptionForm')}
+      >
+        <Plus color="#ffffff" size={20} />
+        <Text style={styles.addButtonText}>Add</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
   return (
     <View style={[styles.container, isDarkMode ? styles.bgDark : styles.bgLight]}>
-      <View style={styles.header}>
-        <Text style={[styles.title, isDarkMode ? styles.textLight : styles.textDark]}>Subscriptions</Text>
-        <TouchableOpacity 
-          style={styles.addButton}
-          onPress={() => navigation.navigate('SubscriptionForm')}
-        >
-          <Plus color="#ffffff" size={20} />
-          <Text style={styles.addButtonText}>Add</Text>
-        </TouchableOpacity>
+      <View style={styles.innerContainer}>
+        {isLoading && subscriptions.length === 0 ? (
+          <View>
+            {renderHeader()}
+            <ActivityIndicator size="large" color="#3b82f6" style={styles.loader} />
+          </View>
+        ) : subscriptions.length === 0 ? (
+          <FlatList
+            data={[]}
+            ListHeaderComponent={renderHeader}
+            ListEmptyComponent={
+              <Text style={[styles.emptyText, isDarkMode ? styles.textGray400 : styles.textGray500]}>
+                No recurring transactions found. Add one to automate your subscriptions.
+              </Text>
+            }
+            contentContainerStyle={styles.listContent}
+          />
+        ) : (
+          <FlatList
+            data={subscriptions}
+            ListHeaderComponent={renderHeader}
+            keyExtractor={item => item.id}
+            renderItem={renderItem}
+            contentContainerStyle={styles.listContent}
+          />
+        )}
       </View>
-
-      {isLoading && subscriptions.length === 0 ? (
-        <ActivityIndicator size="large" color="#3b82f6" style={styles.loader} />
-      ) : subscriptions.length === 0 ? (
-        <Text style={[styles.emptyText, isDarkMode ? styles.textGray400 : styles.textGray500]}>
-          No recurring transactions found. Add one to automate your subscriptions.
-        </Text>
-      ) : (
-        <FlatList
-          data={subscriptions}
-          keyExtractor={item => item.id}
-          renderItem={renderItem}
-          contentContainerStyle={styles.listContent}
-        />
-      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  innerContainer: { flex: 1, maxWidth: 800, width: '100%', alignSelf: 'center' },
   bgLight: { backgroundColor: '#f3f4f6' },
   bgDark: { backgroundColor: '#111827' },
   bgLightCard: { backgroundColor: '#ffffff' },

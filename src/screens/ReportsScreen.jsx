@@ -196,77 +196,79 @@ export default function ReportsScreen() {
 
   return (
     <ScrollView style={[styles.container, isDarkMode ? styles.bgDark : styles.bgLight]}>
-      <View style={styles.header}>
-        <Text style={[styles.title, isDarkMode ? styles.textLight : styles.textDark]}>Analytics & Reports</Text>
-        <TouchableOpacity style={styles.exportButton} onPress={exportReport}>
-          <Text style={styles.exportButtonText}>Export PDF/HTML</Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={[styles.card, isDarkMode ? styles.bgDarkCard : styles.bgLightCard]}>
-        <Text style={[styles.cardTitle, isDarkMode ? styles.textLight : styles.textDark]}>Income vs Expenses</Text>
-        <View style={styles.chartContainer}>
-          <VictoryChart domainPadding={{ x: 30 }} height={250}>
-            <VictoryLegend x={50} y={10}
-              orientation="horizontal"
-              gutter={20}
-              style={{ labels: { fill: textColor } }}
-              data={[
-                { name: "Income", symbol: { fill: "#22c55e" } },
-                { name: "Expenses", symbol: { fill: "#ef4444" } }
-              ]}
-            />
-            <VictoryAxis 
-              style={{
-                axis: { stroke: axisColor },
-                tickLabels: { fill: textColor, fontSize: 10, padding: 5 }
-              }}
-            />
-            <VictoryAxis 
-              dependentAxis
-              tickFormat={(x) => `${formatCurrency(x, currencySymbol)}`}
-              style={{
-                axis: { stroke: axisColor },
-                tickLabels: { fill: textColor, fontSize: 10, padding: 5 },
-                grid: { stroke: isDarkMode ? '#374151' : '#e5e7eb' }
-              }}
-            />
-            <VictoryGroup offset={15} colorScale={["#22c55e", "#ef4444"]}>
-              <VictoryBar 
-                data={barData.incomeData} 
-                barWidth={10}
-                cornerRadius={{ top: 4 }}
-              />
-              <VictoryBar 
-                data={barData.expenseData} 
-                barWidth={10}
-                cornerRadius={{ top: 4 }}
-              />
-            </VictoryGroup>
-          </VictoryChart>
+      <View style={styles.innerContainer}>
+        <View style={styles.header}>
+          <Text style={[styles.title, isDarkMode ? styles.textLight : styles.textDark]}>Analytics & Reports</Text>
+          <TouchableOpacity style={styles.exportButton} onPress={exportReport}>
+            <Text style={styles.exportButtonText}>Export PDF/HTML</Text>
+          </TouchableOpacity>
         </View>
-      </View>
 
-      <View style={[styles.card, isDarkMode ? styles.bgDarkCard : styles.bgLightCard, styles.lastCard]}>
-        <Text style={[styles.cardTitle, isDarkMode ? styles.textLight : styles.textDark]}>Expenses by Category</Text>
-        {pieData.length > 0 ? (
-          <View style={styles.pieContainer}>
-            <VictoryPie
-              height={250}
-              data={pieData}
-              innerRadius={60}
-              colorScale={pieData.map(d => d.color)}
-              style={{
-                labels: { fill: textColor, fontSize: 12, fontWeight: 'bold' }
-              }}
-              labels={({ datum }) => `${datum.x}\n${formatCurrency(datum.y, currencySymbol)}`}
-            />
+        <View style={[styles.card, isDarkMode ? styles.bgDarkCard : styles.bgLightCard]}>
+          <Text style={[styles.cardTitle, isDarkMode ? styles.textLight : styles.textDark]}>Income vs Expenses</Text>
+          <View style={styles.chartContainer}>
+            <VictoryChart domainPadding={{ x: 30 }} height={250}>
+              <VictoryLegend x={50} y={10}
+                orientation="horizontal"
+                gutter={20}
+                style={{ labels: { fill: textColor } }}
+                data={[
+                  { name: "Income", symbol: { fill: "#22c55e" } },
+                  { name: "Expenses", symbol: { fill: "#ef4444" } }
+                ]}
+              />
+              <VictoryAxis 
+                style={{
+                  axis: { stroke: axisColor },
+                  tickLabels: { fill: textColor, fontSize: 10, padding: 5 }
+                }}
+              />
+              <VictoryAxis 
+                dependentAxis
+                tickFormat={(x) => `${formatCurrency(x, currencySymbol)}`}
+                style={{
+                  axis: { stroke: axisColor },
+                  tickLabels: { fill: textColor, fontSize: 10, padding: 5 },
+                  grid: { stroke: isDarkMode ? '#374151' : '#e5e7eb' }
+                }}
+              />
+              <VictoryGroup offset={15} colorScale={["#22c55e", "#ef4444"]}>
+                <VictoryBar 
+                  data={barData.incomeData} 
+                  barWidth={10}
+                  cornerRadius={{ top: 4 }}
+                />
+                <VictoryBar 
+                  data={barData.expenseData} 
+                  barWidth={10}
+                  cornerRadius={{ top: 4 }}
+                />
+              </VictoryGroup>
+            </VictoryChart>
           </View>
-        ) : (
-          <Text style={[styles.emptyText, isDarkMode ? styles.textGray400 : styles.textGray500]}>
-            No expenses recorded yet.
-          </Text>
-        )}
+        </View>
+
+        <View style={[styles.card, isDarkMode ? styles.bgDarkCard : styles.bgLightCard, styles.lastCard]}>
+          <Text style={[styles.cardTitle, isDarkMode ? styles.textLight : styles.textDark]}>Expenses by Category</Text>
+          {pieData.length > 0 ? (
+            <View style={styles.pieContainer}>
+              <VictoryPie
+                height={250}
+                data={pieData}
+                innerRadius={60}
+                colorScale={pieData.map(d => d.color)}
+                style={{
+                  labels: { fill: textColor, fontSize: 12, fontWeight: 'bold' }
+                }}
+                labels={({ datum }) => `${datum.x}\n${formatCurrency(datum.y, currencySymbol)}`}
+              />
+            </View>
+          ) : (
+            <Text style={[styles.emptyText, isDarkMode ? styles.textGray400 : styles.textGray500]}>
+              No expenses recorded yet.
+            </Text>
+          )}
+        </View>
       </View>
     </ScrollView>
   );
@@ -274,6 +276,7 @@ export default function ReportsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  innerContainer: { flex: 1, maxWidth: 800, width: '100%', alignSelf: 'center' },
   bgLight: { backgroundColor: '#f3f4f6' },
   bgDark: { backgroundColor: '#111827' },
   bgLightCard: { backgroundColor: '#ffffff' },

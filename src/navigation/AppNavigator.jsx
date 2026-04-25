@@ -1,4 +1,5 @@
 import React from 'react';
+import { useWindowDimensions } from 'react-native';
 import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createDrawerNavigator } from '@react-navigation/drawer';
@@ -19,9 +20,14 @@ const Drawer = createDrawerNavigator();
 
 function DrawerNavigator() {
   const isDarkMode = useAppTheme();
+  const dimensions = useWindowDimensions();
+  const isLargeScreen = dimensions.width >= 768;
+
   return (
     <Drawer.Navigator
       screenOptions={{
+        drawerType: isLargeScreen ? 'permanent' : 'front',
+        headerLeft: isLargeScreen ? () => null : undefined,
         headerStyle: {
           backgroundColor: isDarkMode ? '#1f2937' : '#ffffff',
         },
@@ -31,6 +37,7 @@ function DrawerNavigator() {
         },
         drawerStyle: {
           backgroundColor: isDarkMode ? '#1f2937' : '#ffffff',
+          width: isLargeScreen ? 240 : undefined,
         },
         drawerActiveTintColor: '#3b82f6',
         drawerInactiveTintColor: isDarkMode ? '#d1d5db' : '#4b5563',

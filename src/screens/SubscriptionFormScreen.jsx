@@ -236,7 +236,7 @@ const styles = StyleSheet.create({
   textGray500: { color: '#6b7280' },
   textGray700: { color: '#374151' },
   textGray900: { color: '#111827' },
-  scrollContent: { padding: 20 },
+  scrollContent: { padding: 20, maxWidth: 600, width: '100%', alignSelf: 'center' },
   inputGroup: { marginBottom: 20 },
   label: { fontSize: 14, fontWeight: '500', marginBottom: 8 },
   input: {

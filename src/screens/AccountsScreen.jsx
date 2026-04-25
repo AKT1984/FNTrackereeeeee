@@ -108,8 +108,8 @@ export default function AccountsScreen() {
     );
   };
 
-  return (
-    <View style={[styles.container, isDarkMode ? styles.bgDark : styles.bgLight]}>
+  const renderHeader = () => (
+    <View>
       <View style={styles.header}>
         <Text style={[styles.title, isDarkMode ? styles.textLight : styles.textDark]}>Manage Accounts</Text>
         {!isAdding && !editingId && (
@@ -146,25 +146,40 @@ export default function AccountsScreen() {
           </View>
         </View>
       )}
+    </View>
+  );
 
-      {accounts.length === 0 && !isAdding ? (
-        <Text style={[styles.emptyText, isDarkMode ? styles.textGray400 : styles.textGray500]}>
-          No accounts found. Add one to start tracking multiple balances.
-        </Text>
-      ) : (
-        <FlatList
-          data={accounts}
-          keyExtractor={item => item.id}
-          renderItem={renderItem}
-          contentContainerStyle={styles.listContent}
-        />
-      )}
+  return (
+    <View style={[styles.container, isDarkMode ? styles.bgDark : styles.bgLight]}>
+      <View style={styles.innerContainer}>
+        {accounts.length === 0 && !isAdding ? (
+          <FlatList
+            data={[]}
+            ListHeaderComponent={renderHeader}
+            ListEmptyComponent={
+              <Text style={[styles.emptyText, isDarkMode ? styles.textGray400 : styles.textGray500]}>
+                No accounts found. Add one to start tracking multiple balances.
+              </Text>
+            }
+            contentContainerStyle={styles.listContent}
+          />
+        ) : (
+          <FlatList
+            data={accounts}
+            ListHeaderComponent={renderHeader}
+            keyExtractor={item => item.id}
+            renderItem={renderItem}
+            contentContainerStyle={styles.listContent}
+          />
+        )}
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  innerContainer: { flex: 1, maxWidth: 800, width: '100%', alignSelf: 'center' },
   bgLight: { backgroundColor: '#f3f4f6' },
   bgDark: { backgroundColor: '#111827' },
   bgLightCard: { backgroundColor: '#ffffff' },

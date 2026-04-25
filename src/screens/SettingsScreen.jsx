@@ -187,7 +187,7 @@ export default function SettingsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  content: { padding: 20 },
+  content: { padding: 20, maxWidth: 800, width: '100%', alignSelf: 'center' },
   bgLight: { backgroundColor: '#f3f4f6' },
   bgDark: { backgroundColor: '#111827' },
   bgLightCard: { backgroundColor: '#ffffff' },

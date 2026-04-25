@@ -87,90 +87,108 @@ export default function MainScreen({ navigation }) {
     );
   };
 
-  return (
-    <View style={[styles.container, isDarkMode ? styles.bgDark : styles.bgLight]}>
-      <View style={styles.headerPadding}>
-        <View style={[styles.balanceCard, isDarkMode ? styles.bgDarkCard : styles.bgLightCard]}>
-          <View style={styles.rowBetween}>
-            <Text style={[styles.cardLabel, isDarkMode ? styles.textGray400 : styles.textGray500]}>Total Balance</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('Reports')}>
-              <Text style={styles.reportsLink}>View Reports &gt;</Text>
-            </TouchableOpacity>
-          </View>
-          <Text style={[styles.balanceAmount, totalBalance >= 0 ? styles.textGreen : styles.textRed]}>
-            {formatCurrency(totalBalance, currencySymbol)}
+  const renderHeader = () => (
+    <View style={styles.headerPadding}>
+      <View style={[styles.balanceCard, isDarkMode ? styles.bgDarkCard : styles.bgLightCard]}>
+        <View style={styles.rowBetween}>
+          <Text style={[styles.cardLabel, isDarkMode ? styles.textGray400 : styles.textGray500]}>Total Balance</Text>
+          <TouchableOpacity onPress={() => navigation.navigate('Reports')}>
+            <Text style={styles.reportsLink}>View Reports &gt;</Text>
+          </TouchableOpacity>
+        </View>
+        <Text style={[styles.balanceAmount, totalBalance >= 0 ? styles.textGreen : styles.textRed]}>
+          {formatCurrency(totalBalance, currencySymbol)}
+        </Text>
+      </View>
+
+      {(accounts.length > 0 || defaultBalance !== 0) && (
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false} 
+          style={styles.accountsScroll}
+          contentContainerStyle={styles.accountsScrollContent}
+        >
+          {[{ id: 'default', name: 'Default Account', currency: user?.currency || 'USD' }, ...accounts].map(account => {
+            const balance = account.id === 'default' ? defaultBalance : (balancesByAccount[account.id] || 0);
+            // Only show default account if there are no other accounts, or if it has a non-zero balance
+            if (account.id === 'default' && accounts.length > 0 && balance === 0) return null;
+            
+            const accCurrencySymbol = CURRENCY_SYMBOLS[account.currency || user?.currency || 'USD'] || account.currency || '$';
+            
+            return (
+              <View key={account.id} style={[styles.accountPill, isDarkMode ? styles.bgDarkCard : styles.bgLightCard]}>
+                <Text style={[styles.accountName, isDarkMode ? styles.textGray400 : styles.textGray500]}>{account.name}</Text>
+                <Text style={[styles.accountBalance, balance >= 0 ? styles.textGreen : styles.textRed]}>
+                  {formatCurrency(balance, accCurrencySymbol)}
+                </Text>
+              </View>
+            );
+          })}
+        </ScrollView>
+      )}
+
+      <View style={styles.rowBetween}>
+        <View style={[styles.halfCard, isDarkMode ? styles.bgDarkCard : styles.bgLightCard]}>
+          <Text style={[styles.cardLabel, isDarkMode ? styles.textGray400 : styles.textGray500]}>Budget (Income)</Text>
+          <Text style={[styles.halfCardAmount, styles.textGreen]}>
+            {formatCurrency(totalBudget, currencySymbol)}
           </Text>
         </View>
-
-        {(accounts.length > 0 || defaultBalance !== 0) && (
-          <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={false} 
-            style={styles.accountsScroll}
-            contentContainerStyle={styles.accountsScrollContent}
-          >
-            {[{ id: 'default', name: 'Default Account', currency: user?.currency || 'USD' }, ...accounts].map(account => {
-              const balance = account.id === 'default' ? defaultBalance : (balancesByAccount[account.id] || 0);
-              // Only show default account if there are no other accounts, or if it has a non-zero balance
-              if (account.id === 'default' && accounts.length > 0 && balance === 0) return null;
-              
-              const accCurrencySymbol = CURRENCY_SYMBOLS[account.currency || user?.currency || 'USD'] || account.currency || '$';
-              
-              return (
-                <View key={account.id} style={[styles.accountPill, isDarkMode ? styles.bgDarkCard : styles.bgLightCard]}>
-                  <Text style={[styles.accountName, isDarkMode ? styles.textGray400 : styles.textGray500]}>{account.name}</Text>
-                  <Text style={[styles.accountBalance, balance >= 0 ? styles.textGreen : styles.textRed]}>
-                    {formatCurrency(balance, accCurrencySymbol)}
-                  </Text>
-                </View>
-              );
-            })}
-          </ScrollView>
-        )}
-
-        <View style={styles.rowBetween}>
-          <View style={[styles.halfCard, isDarkMode ? styles.bgDarkCard : styles.bgLightCard]}>
-            <Text style={[styles.cardLabel, isDarkMode ? styles.textGray400 : styles.textGray500]}>Budget (Income)</Text>
-            <Text style={[styles.halfCardAmount, styles.textGreen]}>
-              {formatCurrency(totalBudget, currencySymbol)}
-            </Text>
-          </View>
-          <View style={[styles.halfCard, isDarkMode ? styles.bgDarkCard : styles.bgLightCard]}>
-            <Text style={[styles.cardLabel, isDarkMode ? styles.textGray400 : styles.textGray500]}>Expenses</Text>
-            <Text style={[styles.halfCardAmount, styles.textRed]}>
-              {formatCurrency(totalExpenses, currencySymbol)}
-            </Text>
-          </View>
+        <View style={[styles.halfCard, isDarkMode ? styles.bgDarkCard : styles.bgLightCard]}>
+          <Text style={[styles.cardLabel, isDarkMode ? styles.textGray400 : styles.textGray500]}>Expenses</Text>
+          <Text style={[styles.halfCardAmount, styles.textRed]}>
+            {formatCurrency(totalExpenses, currencySymbol)}
+          </Text>
         </View>
       </View>
 
-      <View style={styles.listContainer}>
-        <View style={styles.listHeader}>
-          <Text style={[styles.listTitle, isDarkMode ? styles.textLight : styles.textDark]}>Recent Transactions</Text>
-          <TouchableOpacity 
-            style={styles.addButton}
-            onPress={() => navigation.navigate('AddTransaction')}
-          >
-            <Text style={styles.addButtonText}>+ Add</Text>
-          </TouchableOpacity>
+      <View style={styles.listHeader}>
+        <Text style={[styles.listTitle, isDarkMode ? styles.textLight : styles.textDark]}>Recent Transactions</Text>
+        <TouchableOpacity 
+          style={styles.addButton}
+          onPress={() => navigation.navigate('AddTransaction')}
+        >
+          <Text style={styles.addButtonText}>+ Add</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
+  return (
+    <View style={[styles.container, isDarkMode ? styles.bgDark : styles.bgLight]}>
+      <View style={styles.innerContainer}>
+        <View style={styles.listContainer}>
+          {isLoading && transactions.length === 0 ? (
+            <View>
+              {renderHeader()}
+              <ActivityIndicator size="large" color="#3b82f6" style={styles.loader} />
+            </View>
+          ) : error ? (
+            <View>
+              {renderHeader()}
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
+          ) : transactions.length === 0 ? (
+            <FlatList
+              data={[]}
+              ListHeaderComponent={renderHeader}
+              ListEmptyComponent={<Text style={[styles.emptyText, isDarkMode ? styles.textGray400 : styles.textGray500]}>No transactions found.</Text>}
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.listContent}
+            />
+          ) : (
+            <FlatList
+              data={[...transactions].sort((a, b) => {
+                return getDateFromTimestamp(b.date).getTime() - getDateFromTimestamp(a.date).getTime();
+              })}
+              ListHeaderComponent={renderHeader}
+              keyExtractor={item => item.id}
+              renderItem={renderItem}
+              contentContainerStyle={styles.listContent}
+              showsVerticalScrollIndicator={false}
+            />
+          )}
         </View>
-        {isLoading && transactions.length === 0 ? (
-          <ActivityIndicator size="large" color="#3b82f6" style={styles.loader} />
-        ) : error ? (
-          <Text style={styles.errorText}>{error}</Text>
-        ) : transactions.length === 0 ? (
-          <Text style={[styles.emptyText, isDarkMode ? styles.textGray400 : styles.textGray500]}>No transactions found.</Text>
-        ) : (
-          <FlatList
-            data={[...transactions].sort((a, b) => {
-              return getDateFromTimestamp(b.date).getTime() - getDateFromTimestamp(a.date).getTime();
-            })}
-            keyExtractor={item => item.id}
-            renderItem={renderItem}
-            contentContainerStyle={styles.listContent}
-            showsVerticalScrollIndicator={false}
-          />
-        )}
       </View>
     </View>
   );
@@ -178,6 +196,7 @@ export default function MainScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  innerContainer: { flex: 1, maxWidth: 800, width: '100%', alignSelf: 'center' },
   bgLight: { backgroundColor: '#f3f4f6' },
   bgDark: { backgroundColor: '#111827' },
   bgLightCard: { backgroundColor: '#ffffff' },
