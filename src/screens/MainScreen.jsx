@@ -1,10 +1,11 @@
 import React, { useEffect } from 'react';
-import { View, Text, FlatList, ActivityIndicator, TouchableOpacity, useColorScheme, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, FlatList, ActivityIndicator, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { useSelector, useDispatch } from 'react-redux';
-import { subscribeToTransactions } from '../store/modules/transactions/action-creators';
-import { subscribeToCategories } from '../store/modules/categories/action-creators';
-import { subscribeToAccounts } from '../store/modules/accounts/action-creators';
+import { subscribeToTransactions } from '../store/modules/transactions/thunks';
+import { subscribeToCategories } from '../store/modules/categories/thunks';
+import { subscribeToAccounts } from '../store/modules/accounts/thunks';
 import { selectTotalBudget, selectTotalExpenses, selectTotalBalance, selectTransactions, selectBalancesByAccount } from '../store/modules/transactions/selectors';
+import { useAppTheme } from '../hooks/useAppTheme';
 
 const CURRENCY_SYMBOLS = {
   USD: '$',
@@ -18,7 +19,7 @@ const CURRENCY_SYMBOLS = {
 
 export default function MainScreen({ navigation }) {
   const dispatch = useDispatch();
-  const isDarkMode = useColorScheme() === 'dark';
+  const isDarkMode = useAppTheme();
   
   const user = useSelector(state => state.auth.user);
   const currencySymbol = CURRENCY_SYMBOLS[user?.currency || 'USD'] || '$';
@@ -57,6 +58,8 @@ export default function MainScreen({ navigation }) {
   const renderItem = ({ item }) => {
     const account = accounts.find(a => a.id === item.accountId);
     const accountName = account ? account.name : 'Default Account';
+    const itemCurrency = account?.currency || user?.currency || 'USD';
+    const itemCurrencySymbol = CURRENCY_SYMBOLS[itemCurrency] || itemCurrency || '$';
     
     return (
       <TouchableOpacity 
@@ -70,9 +73,14 @@ export default function MainScreen({ navigation }) {
           <Text style={styles.transactionDate}>
             {item.date ? (item.date.toDate ? item.date.toDate().toLocaleDateString() : new Date(item.date).toLocaleDateString()) : 'N/A'} • {accountName}
           </Text>
+          {item.originalCurrency && item.originalCurrency !== itemCurrency && (
+            <Text style={styles.originalAmountText}>
+              ({CURRENCY_SYMBOLS[item.originalCurrency] || item.originalCurrency}{Number(item.originalAmount).toFixed(2)})
+            </Text>
+          )}
         </View>
         <Text style={[styles.transactionAmount, item.type === 'INCOME' ? styles.textGreen : styles.textRed]}>
-          {item.type === 'INCOME' ? '+' : '-'}{currencySymbol}{Number(item.amount).toFixed(2)}
+          {item.type === 'INCOME' ? '+' : '-'}{itemCurrencySymbol}{Number(item.amount).toFixed(2)}
         </Text>
       </TouchableOpacity>
     );
@@ -100,16 +108,18 @@ export default function MainScreen({ navigation }) {
             style={styles.accountsScroll}
             contentContainerStyle={styles.accountsScrollContent}
           >
-            {[{ id: 'default', name: 'Default Account' }, ...accounts].map(account => {
+            {[{ id: 'default', name: 'Default Account', currency: user?.currency || 'USD' }, ...accounts].map(account => {
               const balance = account.id === 'default' ? defaultBalance : (balancesByAccount[account.id] || 0);
               // Only show default account if there are no other accounts, or if it has a non-zero balance
               if (account.id === 'default' && accounts.length > 0 && balance === 0) return null;
+              
+              const accCurrencySymbol = CURRENCY_SYMBOLS[account.currency || user?.currency || 'USD'] || account.currency || '$';
               
               return (
                 <View key={account.id} style={[styles.accountPill, isDarkMode ? styles.bgDarkCard : styles.bgLightCard]}>
                   <Text style={[styles.accountName, isDarkMode ? styles.textGray400 : styles.textGray500]}>{account.name}</Text>
                   <Text style={[styles.accountBalance, balance >= 0 ? styles.textGreen : styles.textRed]}>
-                    {currencySymbol}{balance.toFixed(2)}
+                    {accCurrencySymbol}{balance.toFixed(2)}
                   </Text>
                 </View>
               );
@@ -257,5 +267,6 @@ const styles = StyleSheet.create({
   },
   transactionDesc: { fontSize: 16, fontWeight: '500', marginBottom: 4 },
   transactionDate: { fontSize: 12, color: '#9ca3af' },
+  originalAmountText: { fontSize: 12, color: '#6b7280', marginTop: 2, fontStyle: 'italic' },
   transactionAmount: { fontSize: 16, fontWeight: 'bold' },
 });

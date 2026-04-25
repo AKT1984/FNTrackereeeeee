@@ -1,9 +1,20 @@
 import { getDocs, addDoc, setDoc, deleteDoc, query, where, onSnapshot, doc } from 'firebase/firestore';
-import * as actions from './actions';
-import * as routes from './routes';
 import { auth } from '../../../firebase';
+import * as routes from './routes';
+import {
+  fetchCategoriesRequest,
+  fetchCategoriesSuccess,
+  fetchCategoriesError,
+  addCategoryRequest,
+  addCategoryError,
+  updateCategoryRequest,
+  updateCategoryError,
+  deleteCategoryRequest,
+  deleteCategoryError,
+} from './slice';
+import { AppDispatch } from '../../index';
 
-const handleFirestoreError = (error, operationType, path) => {
+const handleFirestoreError = (error: any, operationType: string, path: string) => {
   const errInfo = {
     error: error instanceof Error ? error.message : String(error),
     authInfo: {
@@ -26,36 +37,33 @@ const handleFirestoreError = (error, operationType, path) => {
   return new Error(JSON.stringify(errInfo));
 };
 
-export const subscribeToCategories = () => (dispatch) => {
-  dispatch(actions.fetchCategoriesRequest());
+export const subscribeToCategories = () => (dispatch: AppDispatch) => {
+  dispatch(fetchCategoriesRequest());
   
   const userId = auth.currentUser?.uid;
   if (!userId) {
-    dispatch(actions.fetchCategoriesError('User not authenticated'));
+    dispatch(fetchCategoriesError('User not authenticated'));
     return () => {};
   }
 
-  // Query for user-specific categories OR system default categories (where userId == null)
-  // Note: Firestore requires a composite index for complex OR queries, so we fetch user categories here.
-  // In a real app, you might fetch system categories separately and merge them.
   const q = query(routes.getCategoriesCollection(), where('userId', '==', userId));
   
   const unsubscribe = onSnapshot(q, (snapshot) => {
-    const categories = [];
+    const categories: any[] = [];
     snapshot.forEach((doc) => {
       categories.push({ id: doc.id, ...doc.data() });
     });
-    dispatch(actions.fetchCategoriesSuccess(categories));
+    dispatch(fetchCategoriesSuccess(categories));
   }, (error) => {
     const handledError = handleFirestoreError(error, 'list', 'categories');
-    dispatch(actions.fetchCategoriesError(handledError.message));
+    dispatch(fetchCategoriesError(handledError.message));
   });
 
   return unsubscribe;
 };
 
-export const addCategory = (categoryData) => async (dispatch) => {
-  dispatch(actions.addCategoryRequest());
+export const addCategory = (categoryData: any) => async (dispatch: AppDispatch) => {
+  dispatch(addCategoryRequest());
   try {
     const userId = auth.currentUser?.uid;
     if (!userId) throw new Error('User not authenticated');
@@ -71,12 +79,12 @@ export const addCategory = (categoryData) => async (dispatch) => {
     await setDoc(docRef, newCategory);
   } catch (error) {
     const handledError = handleFirestoreError(error, 'create', 'categories');
-    dispatch(actions.addCategoryError(handledError.message));
+    dispatch(addCategoryError(handledError.message));
   }
 };
 
-export const updateCategory = (id, categoryData) => async (dispatch) => {
-  dispatch(actions.updateCategoryRequest());
+export const updateCategory = (id: string, categoryData: any) => async (dispatch: AppDispatch) => {
+  dispatch(updateCategoryRequest());
   try {
     const userId = auth.currentUser?.uid;
     if (!userId) throw new Error('User not authenticated');
@@ -84,16 +92,16 @@ export const updateCategory = (id, categoryData) => async (dispatch) => {
     await setDoc(routes.getCategoryDoc(id), { ...categoryData, userId }, { merge: true });
   } catch (error) {
     const handledError = handleFirestoreError(error, 'update', `categories/${id}`);
-    dispatch(actions.updateCategoryError(handledError.message));
+    dispatch(updateCategoryError(handledError.message));
   }
 };
 
-export const deleteCategory = (id) => async (dispatch) => {
-  dispatch(actions.deleteCategoryRequest());
+export const deleteCategory = (id: string) => async (dispatch: AppDispatch) => {
+  dispatch(deleteCategoryRequest());
   try {
     await deleteDoc(routes.getCategoryDoc(id));
   } catch (error) {
     const handledError = handleFirestoreError(error, 'delete', `categories/${id}`);
-    dispatch(actions.deleteCategoryError(handledError.message));
+    dispatch(deleteCategoryError(handledError.message));
   }
 };

@@ -1,10 +1,20 @@
 import { getDocs, addDoc, setDoc, deleteDoc, query, where, onSnapshot, doc, serverTimestamp } from 'firebase/firestore';
-import * as actions from './actions';
-import * as routes from './routes';
 import { auth } from '../../../firebase';
+import * as routes from './routes';
+import {
+  fetchTransactionsRequest,
+  fetchTransactionsSuccess,
+  fetchTransactionsError,
+  addTransactionRequest,
+  addTransactionError,
+  updateTransactionRequest,
+  updateTransactionError,
+  deleteTransactionRequest,
+  deleteTransactionError,
+} from './slice';
+import { AppDispatch } from '../../index';
 
-// Helper for error handling
-const handleFirestoreError = (error, operationType, path) => {
+const handleFirestoreError = (error: any, operationType: string, path: string) => {
   const errInfo = {
     error: error instanceof Error ? error.message : String(error),
     authInfo: {
@@ -27,33 +37,33 @@ const handleFirestoreError = (error, operationType, path) => {
   return new Error(JSON.stringify(errInfo));
 };
 
-export const subscribeToTransactions = () => (dispatch) => {
-  dispatch(actions.fetchTransactionsRequest());
+export const subscribeToTransactions = () => (dispatch: AppDispatch) => {
+  dispatch(fetchTransactionsRequest());
   
   const userId = auth.currentUser?.uid;
   if (!userId) {
-    dispatch(actions.fetchTransactionsError('User not authenticated'));
+    dispatch(fetchTransactionsError('User not authenticated'));
     return () => {};
   }
 
   const q = query(routes.getTransactionsCollection(), where('userId', '==', userId));
   
   const unsubscribe = onSnapshot(q, (snapshot) => {
-    const transactions = [];
+    const transactions: any[] = [];
     snapshot.forEach((doc) => {
       transactions.push({ id: doc.id, ...doc.data() });
     });
-    dispatch(actions.fetchTransactionsSuccess(transactions));
+    dispatch(fetchTransactionsSuccess(transactions));
   }, (error) => {
     const handledError = handleFirestoreError(error, 'list', 'transactions');
-    dispatch(actions.fetchTransactionsError(handledError.message));
+    dispatch(fetchTransactionsError(handledError.message));
   });
 
   return unsubscribe;
 };
 
-export const addTransaction = (transactionData) => async (dispatch) => {
-  dispatch(actions.addTransactionRequest());
+export const addTransaction = (transactionData: any) => async (dispatch: AppDispatch) => {
+  dispatch(addTransactionRequest());
   try {
     const userId = auth.currentUser?.uid;
     if (!userId) throw new Error('User not authenticated');
@@ -68,35 +78,31 @@ export const addTransaction = (transactionData) => async (dispatch) => {
     };
 
     await setDoc(docRef, newTransaction);
-    
-    // Success is handled by onSnapshot subscription
   } catch (error) {
     const handledError = handleFirestoreError(error, 'create', 'transactions');
-    dispatch(actions.addTransactionError(handledError.message));
+    dispatch(addTransactionError(handledError.message));
   }
 };
 
-export const updateTransaction = (id, transactionData) => async (dispatch) => {
-  dispatch(actions.updateTransactionRequest());
+export const updateTransaction = (id: string, transactionData: any) => async (dispatch: AppDispatch) => {
+  dispatch(updateTransactionRequest());
   try {
     const userId = auth.currentUser?.uid;
     if (!userId) throw new Error('User not authenticated');
 
     await setDoc(routes.getTransactionDoc(id), { ...transactionData, userId }, { merge: true });
-    // Success is handled by onSnapshot subscription
   } catch (error) {
     const handledError = handleFirestoreError(error, 'update', `transactions/${id}`);
-    dispatch(actions.updateTransactionError(handledError.message));
+    dispatch(updateTransactionError(handledError.message));
   }
 };
 
-export const deleteTransaction = (id) => async (dispatch) => {
-  dispatch(actions.deleteTransactionRequest());
+export const deleteTransaction = (id: string) => async (dispatch: AppDispatch) => {
+  dispatch(deleteTransactionRequest());
   try {
     await deleteDoc(routes.getTransactionDoc(id));
-    // Success is handled by onSnapshot subscription
   } catch (error) {
     const handledError = handleFirestoreError(error, 'delete', `transactions/${id}`);
-    dispatch(actions.deleteTransactionError(handledError.message));
+    dispatch(deleteTransactionError(handledError.message));
   }
 };

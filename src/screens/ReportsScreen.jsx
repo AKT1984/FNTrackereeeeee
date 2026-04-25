@@ -1,8 +1,9 @@
 import React, { useMemo } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, useColorScheme, Platform } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Platform, Alert } from 'react-native';
 import { useSelector } from 'react-redux';
 import { VictoryPie, VictoryBar, VictoryChart, VictoryAxis, VictoryGroup, VictoryLegend } from 'victory-native';
 import { selectTotalBudget, selectTotalExpenses, selectTotalBalance, selectTransactions } from '../store/modules/transactions/selectors';
+import { useAppTheme } from '../hooks/useAppTheme';
 
 const CURRENCY_SYMBOLS = {
   USD: '$',
@@ -15,7 +16,7 @@ const CURRENCY_SYMBOLS = {
 };
 
 export default function ReportsScreen() {
-  const isDarkMode = useColorScheme() === 'dark';
+  const isDarkMode = useAppTheme();
   const user = useSelector(state => state.auth.user);
   const currencySymbol = CURRENCY_SYMBOLS[user?.currency || 'USD'] || '$';
   const transactions = useSelector(selectTransactions);
@@ -183,10 +184,10 @@ export default function ReportsScreen() {
         printWindow.document.write(reportHtml);
         printWindow.document.close();
       } else {
-        alert('Please allow popups to generate the report.');
+        Alert.alert('Error', 'Please allow popups to generate the report.');
       }
     } else {
-      alert('PDF/HTML export is currently only supported on the web version.');
+      Alert.alert('Not Supported', 'PDF/HTML export is currently only supported on the web version.');
     }
   };
 

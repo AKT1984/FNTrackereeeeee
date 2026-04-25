@@ -1,8 +1,9 @@
 import React from 'react';
-import { View, Text, StyleSheet, useColorScheme, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { useAppTheme } from '../hooks/useAppTheme';
 
 export default function AboutScreen() {
-  const isDarkMode = useColorScheme() === 'dark';
+  const isDarkMode = useAppTheme();
   return (
     <ScrollView style={[styles.container, isDarkMode ? styles.bgDark : styles.bgLight]}>
       <View style={styles.content}>
@@ -28,7 +29,10 @@ export default function AboutScreen() {
         <Text style={[styles.subtitle, isDarkMode ? styles.textLight : styles.textDark]}>Developer</Text>
         <View style={[styles.card, isDarkMode ? styles.bgDarkCard : styles.bgLightCard]}>
           <Text style={[styles.description, isDarkMode ? styles.textLight : styles.textDark]}>
-            Built by an Expert Software Engineer for the FinTrack RN cross-platform application.
+            Built by Alexandr Capbatut, 3rd-year university student (ASEM, Faculty TISE, Applied Informatics major).
+          </Text>
+          <Text style={[styles.description, { marginTop: 8 }, isDarkMode ? styles.textLight : styles.textDark]}>
+            This application was developed as a diploma project, showcasing a comprehensive personal finance tracker built with React Native and Redux Toolkit.
           </Text>
         </View>
       </View>

@@ -1,9 +1,11 @@
 import React from 'react';
-import { View, Text, StyleSheet, useColorScheme, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
-import { updateCurrency, logoutUser } from '../store/modules/auth/action-creators';
-import { LogOut, User, Download, Info, ChevronRight } from 'lucide-react';
+import { updateCurrency, logoutUser } from '../store/modules/auth/thunks';
+import { setTheme } from '../store/modules/settings/slice';
+import { LogOut, User, Download, Info, ChevronRight, Moon, Sun, Monitor } from 'lucide-react';
 import { useNavigation } from '@react-navigation/native';
+import { useAppTheme } from '../hooks/useAppTheme';
 
 const CURRENCIES = [
   { code: 'USD', symbol: '$', name: 'US Dollar' },
@@ -16,16 +18,21 @@ const CURRENCIES = [
 ];
 
 export default function SettingsScreen() {
-  const isDarkMode = useColorScheme() === 'dark';
+  const isDarkMode = useAppTheme();
   const dispatch = useDispatch();
   const navigation = useNavigation();
   const user = useSelector(state => state.auth.user);
+  const themePreference = useSelector(state => state.settings?.theme || 'system');
   const currentCurrency = user?.currency || 'USD';
 
   const handleCurrencySelect = (code) => {
     if (code !== currentCurrency) {
       dispatch(updateCurrency(code));
     }
+  };
+
+  const handleThemeSelect = (theme) => {
+    dispatch(setTheme(theme));
   };
 
   const handleLogout = () => {
@@ -61,6 +68,51 @@ export default function SettingsScreen() {
             <Text style={styles.logoutText}>Log Out</Text>
           </TouchableOpacity>
         </View>
+
+        {/* Theme Section (Web Only) */}
+        {Platform.OS === 'web' && (
+          <>
+            <Text style={[styles.sectionTitle, isDarkMode ? styles.textLight : styles.textDark]}>
+              Theme
+            </Text>
+            <Text style={[styles.description, isDarkMode ? styles.textGray400 : styles.textGray500]}>
+              Choose your preferred appearance.
+            </Text>
+
+            <View style={[styles.card, isDarkMode ? styles.bgDarkCard : styles.bgLightCard, styles.marginBottom]}>
+              {[
+                { id: 'system', label: 'System Default', icon: Monitor },
+                { id: 'light', label: 'Light', icon: Sun },
+                { id: 'dark', label: 'Dark', icon: Moon },
+              ].map((themeOption, index) => {
+                const isSelected = themeOption.id === themePreference;
+                const Icon = themeOption.icon;
+                return (
+                  <TouchableOpacity
+                    key={themeOption.id}
+                    style={[
+                      styles.currencyRow,
+                      index !== 2 && [styles.borderBottom, isDarkMode ? styles.borderDark : styles.borderLight]
+                    ]}
+                    onPress={() => handleThemeSelect(themeOption.id)}
+                  >
+                    <View style={styles.currencyInfo}>
+                      <Icon color={isDarkMode ? '#f9fafb' : '#111827'} size={20} style={{ marginRight: 12 }} />
+                      <Text style={[styles.currencyName, isDarkMode ? styles.textLight : styles.textDark]}>
+                        {themeOption.label}
+                      </Text>
+                    </View>
+                    {isSelected && (
+                      <View style={styles.checkCircle}>
+                        <View style={styles.checkInner} />
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </>
+        )}
 
         {/* Currency Section */}
         <Text style={[styles.sectionTitle, isDarkMode ? styles.textLight : styles.textDark]}>

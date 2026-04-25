@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Modal, View, Text, TouchableOpacity, FlatList, TextInput, useColorScheme, ActivityIndicator, StyleSheet } from 'react-native';
+import { Modal, View, Text, TouchableOpacity, FlatList, TextInput, ActivityIndicator, StyleSheet } from 'react-native';
 import { useSelector, useDispatch } from 'react-redux';
-import { addCategory } from '../store/modules/categories/action-creators';
+import { addCategory } from '../store/modules/categories/thunks';
+import { useAppTheme } from '../hooks/useAppTheme';
 
 const COLORS = ['#ef4444', '#f97316', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ec4899'];
 const ICONS = ['💰', '🛒', '🍔', '🚗', '🏠', '🎮', '🏥', '✈️'];
@@ -10,7 +11,7 @@ export default function CategoryModal({ visible, onClose, onSelect }) {
   const dispatch = useDispatch();
   const categories = useSelector(state => state.categories.categories || []);
   const isLoading = useSelector(state => state.categories.isLoading);
-  const isDarkMode = useColorScheme() === 'dark';
+  const isDarkMode = useAppTheme();
 
   const [isCreating, setIsCreating] = useState(false);
   const [name, setName] = useState('');

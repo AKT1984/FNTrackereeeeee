@@ -36,6 +36,9 @@
         "type": { "type": "string", "enum": ["INCOME", "EXPENSE"] },
         "categoryId": { "type": "string" },
         "accountId": { "type": ["string", "null"] },
+        "originalAmount": { "type": ["number", "null"] },
+        "originalCurrency": { "type": ["string", "null"] },
+        "exchangeRate": { "type": ["number", "null"] },
         "date": { "type": "string", "format": "date-time" },
         "description": { "type": "string" }
       },
@@ -48,10 +51,31 @@
       "properties": {
         "name": { "type": "string" },
         "userId": { "type": "string" },
+        "currency": { "type": "string" },
         "createdAt": { "type": "string", "format": "date-time" },
         "updatedAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["name", "userId", "createdAt"]
+      "required": ["name", "userId", "currency", "createdAt"]
+    },
+    "Subscription": {
+      "title": "Subscription",
+      "description": "Recurring transactions.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "amount": { "type": "number" },
+        "currency": { "type": "string" },
+        "categoryId": { "type": "string" },
+        "accountId": { "type": "string" },
+        "startDate": { "type": "string", "format": "date-time" },
+        "nextBillingDate": { "type": "string", "format": "date-time" },
+        "frequency": { "type": "string", "enum": ["MONTHLY", "WEEKLY", "YEARLY"] },
+        "notifyDaysBefore": { "type": "number" },
+        "lastProcessedDate": { "type": ["string", "null"], "format": "date-time" }
+      },
+      "required": ["id", "userId", "name", "amount", "currency", "categoryId", "accountId", "startDate", "nextBillingDate", "frequency", "notifyDaysBefore"]
     }
   },
   "firestore": {
@@ -70,6 +94,10 @@
     "/accounts/{accountId}": {
       "schema": { "$ref": "#/entities/Account" },
       "description": "Accounts collection"
+    },
+    "/subscriptions/{subscriptionId}": {
+      "schema": { "$ref": "#/entities/Subscription" },
+      "description": "Subscriptions collection"
     }
   }
 }

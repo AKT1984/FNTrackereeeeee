@@ -1,47 +1,60 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, useColorScheme, TouchableOpacity, FlatList, TextInput, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, TextInput, Alert } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
-import { addAccount, updateAccount, deleteAccount } from '../store/modules/accounts/action-creators';
+import { addAccount, updateAccount, deleteAccount } from '../store/modules/accounts/thunks';
 import { Plus, Edit2, Trash2, X, Check } from 'lucide-react';
+import { useAppTheme } from '../hooks/useAppTheme';
+
+const CURRENCIES = ['USD', 'EUR', 'GBP', 'JPY', 'MDL', 'RUB', 'UAH'];
 
 export default function AccountsScreen() {
-  const isDarkMode = useColorScheme() === 'dark';
+  const isDarkMode = useAppTheme();
   const dispatch = useDispatch();
   const accounts = useSelector(state => state.accounts.accounts || []);
+  const user = useSelector(state => state.auth.user);
   
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [accountName, setAccountName] = useState('');
+  const [accountCurrency, setAccountCurrency] = useState(user?.currency || 'USD');
 
   const handleAdd = () => {
     if (!accountName.trim()) return;
-    dispatch(addAccount({ name: accountName.trim() }));
+    dispatch(addAccount({ name: accountName.trim(), currency: accountCurrency }));
     setAccountName('');
+    setAccountCurrency(user?.currency || 'USD');
     setIsAdding(false);
   };
 
   const handleUpdate = (id) => {
     if (!accountName.trim()) return;
-    dispatch(updateAccount(id, { name: accountName.trim() }));
+    dispatch(updateAccount(id, { name: accountName.trim(), currency: accountCurrency }));
     setAccountName('');
     setEditingId(null);
   };
 
   const handleDelete = (id) => {
-    // In a real app we'd show a confirmation dialog, but Alert.alert doesn't work well in iframe
     dispatch(deleteAccount(id));
   };
 
   const startEdit = (account) => {
     setEditingId(account.id);
     setAccountName(account.name);
+    setAccountCurrency(account.currency || user?.currency || 'USD');
     setIsAdding(false);
   };
 
   const cancelEdit = () => {
     setEditingId(null);
     setAccountName('');
+    setAccountCurrency(user?.currency || 'USD');
     setIsAdding(false);
+  };
+
+  const cycleCurrency = () => {
+    const currentIndex = CURRENCIES.indexOf(accountCurrency);
+    const nextIndex = (currentIndex + 1) % CURRENCIES.length;
+    setAccountCurrency(CURRENCIES[nextIndex]);
   };
 
   const renderItem = ({ item }) => {
@@ -50,6 +63,9 @@ export default function AccountsScreen() {
     if (isEditing) {
       return (
         <View style={[styles.accountCard, isDarkMode ? styles.bgDarkCard : styles.bgLightCard]}>
+          <TouchableOpacity onPress={cycleCurrency} style={[styles.currencyBadge, isDarkMode ? styles.bgDark : styles.bgGray200]}>
+            <Text style={[styles.currencyText, isDarkMode ? styles.textLight : styles.textDark]}>{accountCurrency}</Text>
+          </TouchableOpacity>
           <TextInput
             style={[styles.input, isDarkMode ? styles.textLight : styles.textDark, isDarkMode ? styles.borderDark : styles.borderLight]}
             value={accountName}
@@ -72,9 +88,14 @@ export default function AccountsScreen() {
 
     return (
       <View style={[styles.accountCard, isDarkMode ? styles.bgDarkCard : styles.bgLightCard]}>
-        <Text style={[styles.accountName, isDarkMode ? styles.textLight : styles.textDark]}>
-          {item.name}
-        </Text>
+        <View style={styles.accountInfo}>
+          <Text style={[styles.accountName, isDarkMode ? styles.textLight : styles.textDark]}>
+            {item.name}
+          </Text>
+          <Text style={[styles.accountCurrencyLabel, isDarkMode ? styles.textGray400 : styles.textGray500]}>
+            {item.currency || 'USD'}
+          </Text>
+        </View>
         <View style={styles.actionButtons}>
           <TouchableOpacity onPress={() => startEdit(item)} style={styles.iconButton}>
             <Edit2 color="#3b82f6" size={18} />
@@ -94,7 +115,7 @@ export default function AccountsScreen() {
         {!isAdding && !editingId && (
           <TouchableOpacity 
             style={styles.addButton}
-            onPress={() => { setIsAdding(true); setAccountName(''); }}
+            onPress={() => { setIsAdding(true); setAccountName(''); setAccountCurrency(user?.currency || 'USD'); }}
           >
             <Plus color="#ffffff" size={20} />
             <Text style={styles.addButtonText}>Add Account</Text>
@@ -104,6 +125,9 @@ export default function AccountsScreen() {
 
       {isAdding && (
         <View style={[styles.accountCard, isDarkMode ? styles.bgDarkCard : styles.bgLightCard, styles.addingCard]}>
+          <TouchableOpacity onPress={cycleCurrency} style={[styles.currencyBadge, isDarkMode ? styles.bgDark : styles.bgGray200]}>
+            <Text style={[styles.currencyText, isDarkMode ? styles.textLight : styles.textDark]}>{accountCurrency}</Text>
+          </TouchableOpacity>
           <TextInput
             style={[styles.input, isDarkMode ? styles.textLight : styles.textDark, isDarkMode ? styles.borderDark : styles.borderLight]}
             value={accountName}
@@ -195,10 +219,26 @@ const styles = StyleSheet.create({
     marginHorizontal: 20,
     marginBottom: 20,
   },
+  accountInfo: {
+    flex: 1,
+  },
   accountName: {
     fontSize: 16,
     fontWeight: '500',
-    flex: 1,
+  },
+  accountCurrencyLabel: {
+    fontSize: 12,
+    marginTop: 2,
+  },
+  currencyBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 6,
+    marginRight: 12,
+  },
+  currencyText: {
+    fontSize: 14,
+    fontWeight: 'bold',
   },
   input: {
     flex: 1,

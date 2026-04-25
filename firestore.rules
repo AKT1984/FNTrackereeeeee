@@ -43,6 +43,22 @@ service cloud.firestore {
     //   - createdAt: timestamp (required)
     //   - updatedAt: timestamp (optional)
     //
+    // Collection: subscriptions
+    // Document ID: {subscriptionId}
+    // Fields:
+    //   - id: string (required)
+    //   - userId: string (required)
+    //   - name: string (required)
+    //   - amount: number (required)
+    //   - currency: string (required)
+    //   - categoryId: string (required)
+    //   - accountId: string (required)
+    //   - startDate: timestamp (required)
+    //   - nextBillingDate: timestamp (required)
+    //   - frequency: string (required) - "MONTHLY", "WEEKLY", "YEARLY"
+    //   - notifyDaysBefore: number (required)
+    //   - lastProcessedDate: timestamp|null (optional)
+    //
     // ===============================================================
 
     // ===============================================================
@@ -107,23 +123,43 @@ service cloud.firestore {
     }
 
     function isValidTransaction(data) {
-      return hasOnlyAllowedFields(['id', 'userId', 'amount', 'type', 'categoryId', 'accountId', 'date', 'description']) &&
+      return hasOnlyAllowedFields(['id', 'userId', 'amount', 'type', 'categoryId', 'accountId', 'originalAmount', 'originalCurrency', 'exchangeRate', 'date', 'description']) &&
              data.id is string && data.id.size() > 0 && data.id.size() < 100 &&
              data.userId is string && data.userId.size() > 0 && data.userId.size() < 100 &&
              data.amount is number && data.amount >= 0 &&
              data.type in ['INCOME', 'EXPENSE'] &&
              data.categoryId is string && data.categoryId.size() > 0 && data.categoryId.size() < 100 &&
              (!('accountId' in data) || data.accountId == null || (data.accountId is string && data.accountId.size() > 0 && data.accountId.size() < 100)) &&
+             (!('originalAmount' in data) || data.originalAmount == null || data.originalAmount is number) &&
+             (!('originalCurrency' in data) || data.originalCurrency == null || (data.originalCurrency is string && data.originalCurrency.size() == 3)) &&
+             (!('exchangeRate' in data) || data.exchangeRate == null || data.exchangeRate is number) &&
              data.date is timestamp &&
              data.description is string && data.description.size() <= 1000;
     }
 
     function isValidAccount(data) {
-      return hasOnlyAllowedFields(['name', 'userId', 'createdAt', 'updatedAt']) &&
+      return hasOnlyAllowedFields(['name', 'userId', 'currency', 'createdAt', 'updatedAt']) &&
              data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
              data.userId is string && data.userId.size() > 0 && data.userId.size() < 100 &&
+             data.currency is string && data.currency.size() == 3 &&
              data.createdAt is timestamp &&
              (!('updatedAt' in data) || data.updatedAt is timestamp);
+    }
+
+    function isValidSubscription(data) {
+      return hasOnlyAllowedFields(['id', 'userId', 'name', 'amount', 'currency', 'categoryId', 'accountId', 'startDate', 'nextBillingDate', 'frequency', 'notifyDaysBefore', 'lastProcessedDate']) &&
+             data.id is string && data.id.size() > 0 && data.id.size() < 100 &&
+             data.userId is string && data.userId.size() > 0 && data.userId.size() < 100 &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.amount is number && data.amount >= 0 &&
+             data.currency is string && data.currency.size() == 3 &&
+             data.categoryId is string && data.categoryId.size() > 0 && data.categoryId.size() < 100 &&
+             data.accountId is string && data.accountId.size() > 0 && data.accountId.size() < 100 &&
+             data.startDate is timestamp &&
+             data.nextBillingDate is timestamp &&
+             data.frequency in ['MONTHLY', 'WEEKLY', 'YEARLY'] &&
+             data.notifyDaysBefore is number && data.notifyDaysBefore >= 0 && data.notifyDaysBefore <= 30 &&
+             (!('lastProcessedDate' in data) || data.lastProcessedDate == null || data.lastProcessedDate is timestamp);
     }
 
     // ===============================================================
@@ -158,6 +194,13 @@ service cloud.firestore {
       allow read: if isOwner(resource.data.userId);
       allow create: if isAuthenticated() && isValidAccount(request.resource.data) && userIdUnchanged();
       allow update: if isAuthenticated() && isValidAccount(request.resource.data) && isDocOwner() && userIdNotModified() && request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if isDocOwner();
+    }
+
+    match /subscriptions/{subscriptionId} {
+      allow read: if isOwner(resource.data.userId);
+      allow create: if isAuthenticated() && isValidSubscription(request.resource.data) && userIdUnchanged();
+      allow update: if isAuthenticated() && isValidSubscription(request.resource.data) && isDocOwner() && userIdNotModified();
       allow delete: if isDocOwner();
     }
   }

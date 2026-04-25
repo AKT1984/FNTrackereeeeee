@@ -1,12 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   View, Text, TextInput, TouchableOpacity, 
-  KeyboardAvoidingView, Platform, ScrollView, useColorScheme, ActivityIndicator, StyleSheet 
+  KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator, StyleSheet 
 } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
-import { addTransaction, updateTransaction, deleteTransaction } from '../store/modules/transactions/action-creators';
+import { addTransaction, updateTransaction, deleteTransaction } from '../store/modules/transactions/thunks';
 import CategoryModal from '../components/CategoryModal';
 import AccountModal from '../components/AccountModal';
+import { fetchExchangeRate } from '../services/exchangeRateService';
+import { useAppTheme } from '../hooks/useAppTheme';
 
 const CURRENCY_SYMBOLS = {
   USD: '$',
@@ -18,53 +20,97 @@ const CURRENCY_SYMBOLS = {
   UAH: '₴',
 };
 
+const AVAILABLE_CURRENCIES = Object.keys(CURRENCY_SYMBOLS);
+
 export default function TransactionFormScreen({ route, navigation }) {
   const dispatch = useDispatch();
-  const isDarkMode = useColorScheme() === 'dark';
+  const isDarkMode = useAppTheme();
   const isLoading = useSelector(state => state.transactions.isLoading);
   const user = useSelector(state => state.auth.user);
   const accounts = useSelector(state => state.accounts.accounts || []);
-  const currencySymbol = CURRENCY_SYMBOLS[user?.currency || 'USD'] || '$';
   
   const transaction = route.params?.transaction;
   const isEditing = !!transaction;
 
-  const [amount, setAmount] = useState(transaction ? String(transaction.amount) : '');
-  const [description, setDescription] = useState(transaction ? transaction.description : '');
-  const [type, setType] = useState(transaction ? transaction.type : 'EXPENSE');
-  const [category, setCategory] = useState(transaction ? { id: transaction.categoryId, name: 'Selected Category' } : null);
-  
-  // Find the account object if editing, otherwise default to the first account if available
   const defaultAccount = accounts.length > 0 ? accounts[0] : null;
   const initialAccount = transaction && transaction.accountId 
     ? accounts.find(a => a.id === transaction.accountId) || { id: transaction.accountId, name: 'Selected Account' }
     : defaultAccount;
     
   const [account, setAccount] = useState(initialAccount);
+
+  const baseCurrency = account?.currency || user?.currency || 'USD';
+
+  const [amount, setAmount] = useState(transaction?.originalAmount ? String(transaction.originalAmount) : (transaction ? String(transaction.amount) : ''));
+  const [currency, setCurrency] = useState(transaction?.originalCurrency || baseCurrency);
+  const [description, setDescription] = useState(transaction ? transaction.description : '');
+  const [type, setType] = useState(transaction ? transaction.type : 'EXPENSE');
+  const [category, setCategory] = useState(transaction ? { id: transaction.categoryId, name: 'Selected Category' } : null);
+  
+  // Update currency when account changes if not editing
+  useEffect(() => {
+    if (!isEditing && account) {
+      setCurrency(account.currency || user?.currency || 'USD');
+    }
+  }, [account, isEditing, user?.currency]);
+  
+  // Exchange rate state
+  const [exchangeRate, setExchangeRate] = useState(transaction?.exchangeRate || 1);
+  const [isFetchingRate, setIsFetchingRate] = useState(false);
+  const [rateError, setRateError] = useState(null);
   
   const [isCategoryModalVisible, setCategoryModalVisible] = useState(false);
   const [isAccountModalVisible, setAccountModalVisible] = useState(false);
 
   const descInputRef = useRef(null);
 
-  // Form Validation State
   const [isValid, setIsValid] = useState(false);
 
   useEffect(() => {
     const isAmountValid = amount.trim() !== '' && !isNaN(Number(amount)) && Number(amount) > 0;
     const isCategoryValid = category !== null;
-    setIsValid(isAmountValid && isCategoryValid);
-  }, [amount, category]);
+    setIsValid(isAmountValid && isCategoryValid && !isFetchingRate);
+  }, [amount, category, isFetchingRate]);
+
+  useEffect(() => {
+    const getRate = async () => {
+      if (currency === baseCurrency) {
+        setExchangeRate(1);
+        setRateError(null);
+        return;
+      }
+      
+      setIsFetchingRate(true);
+      setRateError(null);
+      try {
+        const rate = await fetchExchangeRate(currency, baseCurrency);
+        setExchangeRate(rate);
+      } catch (error) {
+        setRateError('Failed to fetch exchange rate. Using 1:1.');
+        setExchangeRate(1);
+      } finally {
+        setIsFetchingRate(false);
+      }
+    };
+
+    getRate();
+  }, [currency, baseCurrency]);
 
   const handleSubmit = () => {
     if (!isValid) return;
 
+    const numericAmount = Number(amount);
+    const convertedAmount = currency === baseCurrency ? numericAmount : numericAmount * exchangeRate;
+
     const transactionData = {
-      amount: Number(amount),
+      amount: convertedAmount,
       description: description.trim(),
       type,
       categoryId: category.id,
       accountId: account ? account.id : null,
+      originalAmount: numericAmount,
+      originalCurrency: currency,
+      exchangeRate: exchangeRate,
     };
 
     if (isEditing) {
@@ -82,6 +128,16 @@ export default function TransactionFormScreen({ route, navigation }) {
       navigation.goBack();
     }
   };
+
+  const cycleCurrency = () => {
+    const currentIndex = AVAILABLE_CURRENCIES.indexOf(currency);
+    const nextIndex = (currentIndex + 1) % AVAILABLE_CURRENCIES.length;
+    setCurrency(AVAILABLE_CURRENCIES[nextIndex]);
+  };
+
+  const convertedDisplay = currency !== baseCurrency && amount && !isNaN(Number(amount))
+    ? `≈ ${CURRENCY_SYMBOLS[baseCurrency] || baseCurrency}${(Number(amount) * exchangeRate).toFixed(2)}`
+    : null;
 
   return (
     <KeyboardAvoidingView 
@@ -105,18 +161,39 @@ export default function TransactionFormScreen({ route, navigation }) {
         </View>
 
         <View style={styles.inputGroup}>
-          <Text style={[styles.label, isDarkMode ? styles.textGray300 : styles.textGray700]}>Amount ({currencySymbol}) *</Text>
-          <TextInput
-            style={[styles.input, isDarkMode ? styles.inputDark : styles.inputLight]}
-            placeholder="0.00"
-            placeholderTextColor={isDarkMode ? '#9ca3af' : '#6b7280'}
-            keyboardType="numeric"
-            value={amount}
-            onChangeText={setAmount}
-            autoFocus={true}
-            returnKeyType="next"
-            onSubmitEditing={() => descInputRef.current?.focus()}
-          />
+          <Text style={[styles.label, isDarkMode ? styles.textGray300 : styles.textGray700]}>Amount *</Text>
+          <View style={styles.amountContainer}>
+            <TouchableOpacity 
+              style={[styles.currencySelector, isDarkMode ? styles.bgDarkCard : styles.bgGray200]}
+              onPress={cycleCurrency}
+            >
+              <Text style={[styles.currencyText, isDarkMode ? styles.textWhite : styles.textGray900]}>
+                {currency} {CURRENCY_SYMBOLS[currency] || ''}
+              </Text>
+            </TouchableOpacity>
+            <TextInput
+              style={[styles.input, styles.amountInput, isDarkMode ? styles.inputDark : styles.inputLight]}
+              placeholder="0.00"
+              placeholderTextColor={isDarkMode ? '#9ca3af' : '#6b7280'}
+              keyboardType="numeric"
+              value={amount}
+              onChangeText={setAmount}
+              autoFocus={true}
+              returnKeyType="next"
+              onSubmitEditing={() => descInputRef.current?.focus()}
+            />
+          </View>
+          {isFetchingRate && (
+            <Text style={[styles.helperText, styles.textBlue]}>Fetching live exchange rate...</Text>
+          )}
+          {rateError && (
+            <Text style={[styles.helperText, styles.textRed]}>{rateError}</Text>
+          )}
+          {convertedDisplay && !isFetchingRate && !rateError && (
+            <Text style={[styles.helperText, isDarkMode ? styles.textGray400 : styles.textGray500]}>
+              {convertedDisplay} (Rate: {exchangeRate.toFixed(4)})
+            </Text>
+          )}
         </View>
 
         <View style={styles.inputGroup}>
@@ -157,14 +234,14 @@ export default function TransactionFormScreen({ route, navigation }) {
         </View>
 
         <TouchableOpacity 
-          style={[styles.submitButton, (!isValid || isLoading) ? (isDarkMode ? styles.bgBlue800 : styles.bgBlue300) : styles.bgBlue500]}
+          style={[styles.submitButton, (!isValid || isLoading || isFetchingRate) ? (isDarkMode ? styles.bgBlue800 : styles.bgBlue300) : styles.bgBlue500]}
           onPress={handleSubmit}
-          disabled={!isValid || isLoading}
+          disabled={!isValid || isLoading || isFetchingRate}
         >
           {isLoading ? (
             <ActivityIndicator color="#ffffff" />
           ) : (
-            <Text style={styles.submitButtonText}>{isEditing ? 'Save Changes' : `Add Transaction (${currencySymbol})`}</Text>
+            <Text style={styles.submitButtonText}>{isEditing ? 'Save Changes' : `Add Transaction`}</Text>
           )}
         </TouchableOpacity>
 
@@ -238,6 +315,37 @@ const styles = StyleSheet.create({
   },
   inputLight: { backgroundColor: '#ffffff', borderColor: '#d1d5db', color: '#111827' },
   inputDark: { backgroundColor: '#1f2937', borderColor: '#374151', color: '#ffffff' },
+  amountContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  currencySelector: {
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderTopLeftRadius: 8,
+    borderBottomLeftRadius: 8,
+    borderWidth: 1,
+    borderColor: 'transparent',
+    justifyContent: 'center',
+    alignItems: 'center',
+    minWidth: 80,
+  },
+  currencyText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  amountInput: {
+    flex: 1,
+    borderTopLeftRadius: 0,
+    borderBottomLeftRadius: 0,
+    borderLeftWidth: 0,
+  },
+  helperText: {
+    fontSize: 12,
+    marginTop: 6,
+    marginLeft: 4,
+  },
+  textBlue: { color: '#3b82f6' },
   categorySelector: {
     borderWidth: 1,
     borderRadius: 8,

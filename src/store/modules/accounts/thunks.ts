@@ -1,9 +1,20 @@
 import { onSnapshot, query, where, addDoc, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { auth } from '../../../firebase';
-import * as actions from './actions';
 import * as routes from './routes';
+import {
+  fetchAccountsRequest,
+  fetchAccountsSuccess,
+  fetchAccountsError,
+  addAccountRequest,
+  addAccountError,
+  updateAccountRequest,
+  updateAccountError,
+  deleteAccountRequest,
+  deleteAccountError,
+} from './slice';
+import { AppDispatch, RootState } from '../../index';
 
-const handleFirestoreError = (error, operationType, path) => {
+const handleFirestoreError = (error: any, operationType: string, path: string) => {
   const errInfo = {
     error: error instanceof Error ? error.message : String(error),
     authInfo: {
@@ -26,13 +37,13 @@ const handleFirestoreError = (error, operationType, path) => {
   return new Error(JSON.stringify(errInfo));
 };
 
-let unsubscribeAccounts = null;
+let unsubscribeAccounts: (() => void) | null = null;
 
-export const subscribeToAccounts = () => (dispatch, getState) => {
+export const subscribeToAccounts = () => (dispatch: AppDispatch, getState: () => RootState) => {
   const { user } = getState().auth;
   if (!user) return;
 
-  dispatch(actions.fetchAccountsRequest());
+  dispatch(fetchAccountsRequest());
 
   const q = query(
     routes.getAccountsCollection(),
@@ -40,14 +51,14 @@ export const subscribeToAccounts = () => (dispatch, getState) => {
   );
 
   unsubscribeAccounts = onSnapshot(q, (snapshot) => {
-    const accounts = [];
+    const accounts: any[] = [];
     snapshot.forEach((doc) => {
       accounts.push({ id: doc.id, ...doc.data() });
     });
-    dispatch(actions.fetchAccountsSuccess(accounts));
+    dispatch(fetchAccountsSuccess(accounts));
   }, (error) => {
     const handledError = handleFirestoreError(error, 'list', 'accounts');
-    dispatch(actions.fetchAccountsError(handledError.message));
+    dispatch(fetchAccountsError(handledError.message));
   });
 };
 
@@ -58,47 +69,44 @@ export const unsubscribeFromAccounts = () => () => {
   }
 };
 
-export const addAccount = (accountData) => async (dispatch, getState) => {
+export const addAccount = (accountData: any) => async (dispatch: AppDispatch, getState: () => RootState) => {
   const { user } = getState().auth;
   if (!user) return;
 
-  dispatch(actions.addAccountRequest());
+  dispatch(addAccountRequest());
   try {
-    const docRef = await addDoc(routes.getAccountsCollection(), {
+    await addDoc(routes.getAccountsCollection(), {
       ...accountData,
       userId: user.uid,
       createdAt: serverTimestamp(),
     });
-    // The onSnapshot listener will handle the success dispatch
   } catch (error) {
     const handledError = handleFirestoreError(error, 'create', 'accounts');
-    dispatch(actions.addAccountError(handledError.message));
+    dispatch(addAccountError(handledError.message));
   }
 };
 
-export const updateAccount = (id, accountData) => async (dispatch) => {
-  dispatch(actions.updateAccountRequest());
+export const updateAccount = (id: string, accountData: any) => async (dispatch: AppDispatch) => {
+  dispatch(updateAccountRequest());
   try {
     const docRef = routes.getAccountDoc(id);
     await updateDoc(docRef, {
       ...accountData,
       updatedAt: serverTimestamp(),
     });
-    // The onSnapshot listener will handle the success dispatch
   } catch (error) {
     const handledError = handleFirestoreError(error, 'update', `accounts/${id}`);
-    dispatch(actions.updateAccountError(handledError.message));
+    dispatch(updateAccountError(handledError.message));
   }
 };
 
-export const deleteAccount = (id) => async (dispatch) => {
-  dispatch(actions.deleteAccountRequest());
+export const deleteAccount = (id: string) => async (dispatch: AppDispatch) => {
+  dispatch(deleteAccountRequest());
   try {
     const docRef = routes.getAccountDoc(id);
     await deleteDoc(docRef);
-    // The onSnapshot listener will handle the success dispatch
   } catch (error) {
     const handledError = handleFirestoreError(error, 'delete', `accounts/${id}`);
-    dispatch(actions.deleteAccountError(handledError.message));
+    dispatch(deleteAccountError(handledError.message));
   }
 };

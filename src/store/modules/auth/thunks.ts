@@ -1,12 +1,22 @@
 import { signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider, signOut, onAuthStateChanged } from 'firebase/auth';
 import { getDoc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { auth } from '../../../firebase';
-import * as actions from './actions';
+import {
+  loginRequest,
+  loginSuccess,
+  loginError,
+  logoutRequest,
+  logoutSuccess,
+  logoutError,
+  authStateChanged,
+  updateCurrencySuccess,
+} from './slice';
 import * as routes from './routes';
+import { AppDispatch, RootState } from '../../index';
 
 const provider = new GoogleAuthProvider();
 
-const handleFirestoreError = (error, operationType, path) => {
+const handleFirestoreError = (error: any, operationType: string, path: string) => {
   const errInfo = {
     error: error instanceof Error ? error.message : String(error),
     authInfo: {
@@ -29,18 +39,17 @@ const handleFirestoreError = (error, operationType, path) => {
   return new Error(JSON.stringify(errInfo));
 };
 
-export const initAuthListener = () => (dispatch) => {
-  // Check for redirect result first to catch any errors from signInWithRedirect
+export const initAuthListener = () => (dispatch: AppDispatch) => {
   getRedirectResult(auth).catch((error) => {
     console.error("Redirect login error:", error);
     if (error.code === 'auth/unauthorized-domain') {
       const domain = window.location.hostname;
       const msg = `Domain '${domain}' is not authorized. Please go to Firebase Console -> Authentication -> Settings -> Authorized domains and add '${domain}'. Alternatively, access the app via 'localhost' instead of '127.0.0.1'.`;
-      dispatch(actions.loginError(msg));
+      dispatch(loginError(msg));
     } else if (error.message?.includes('missing initial state')) {
-      dispatch(actions.loginError("Login failed due to browser privacy settings blocking third-party cookies. Please use 'localhost' instead of '127.0.0.1' or enable third-party cookies."));
+      dispatch(loginError("Login failed due to browser privacy settings blocking third-party cookies. Please use 'localhost' instead of '127.0.0.1' or enable third-party cookies."));
     } else {
-      dispatch(actions.loginError(error.message));
+      dispatch(loginError(error.message));
     }
   });
 
@@ -48,7 +57,6 @@ export const initAuthListener = () => (dispatch) => {
     if (user) {
       let currency = 'USD';
       try {
-        // Ensure user document exists in Firestore
         const userDocRef = routes.getUserDoc(user.uid);
         let userDoc;
         try {
@@ -63,7 +71,7 @@ export const initAuthListener = () => (dispatch) => {
             await setDoc(userDocRef, {
               uid: user.uid,
               email: user.email,
-              currency: 'USD', // Default currency
+              currency: 'USD',
               createdAt: serverTimestamp(),
             });
           } catch (e) {
@@ -71,13 +79,13 @@ export const initAuthListener = () => (dispatch) => {
             throw e;
           }
         } else {
-          currency = userDoc.data().currency || 'USD';
+          currency = userDoc.data()?.currency || 'USD';
         }
       } catch (error) {
         // Error is already handled and logged
       }
       
-      dispatch(actions.authStateChanged({
+      dispatch(authStateChanged({
         uid: user.uid,
         email: user.email,
         displayName: user.displayName,
@@ -85,13 +93,13 @@ export const initAuthListener = () => (dispatch) => {
         currency,
       }));
     } else {
-      dispatch(actions.authStateChanged(null));
+      dispatch(authStateChanged(null));
     }
   });
 };
 
-export const loginWithGoogle = () => async (dispatch) => {
-  dispatch(actions.loginRequest());
+export const loginWithGoogle = () => async (dispatch: AppDispatch) => {
+  dispatch(loginRequest());
   try {
     const result = await signInWithPopup(auth, provider);
     
@@ -100,30 +108,29 @@ export const loginWithGoogle = () => async (dispatch) => {
       const userDocRef = routes.getUserDoc(result.user.uid);
       const userDoc = await getDoc(userDocRef);
       if (userDoc.exists()) {
-        currency = userDoc.data().currency || 'USD';
+        currency = userDoc.data()?.currency || 'USD';
       }
     } catch (e) {
       console.error("Error fetching user doc on login", e);
     }
 
-    dispatch(actions.loginSuccess({
+    dispatch(loginSuccess({
       uid: result.user.uid,
       email: result.user.email,
       displayName: result.user.displayName,
       photoURL: result.user.photoURL,
       currency,
     }));
-  } catch (error) {
+  } catch (error: any) {
     console.error("Login error:", error);
     
     if (error.code === 'auth/unauthorized-domain') {
       const domain = window.location.hostname;
       const msg = `Domain '${domain}' is not authorized. Please go to Firebase Console -> Authentication -> Settings -> Authorized domains and add '${domain}'. Alternatively, access the app via 'localhost' instead of '127.0.0.1'.`;
-      dispatch(actions.loginError(msg));
+      dispatch(loginError(msg));
       return;
     }
 
-    // If popup is blocked or closed, fallback to redirect
     if (
       error.code === 'auth/popup-blocked' ||
       error.code === 'auth/popup-closed-by-user' || 
@@ -133,39 +140,39 @@ export const loginWithGoogle = () => async (dispatch) => {
       console.log("Popup failed, falling back to redirect...");
       try {
         await signInWithRedirect(auth, provider);
-      } catch (redirectError) {
+      } catch (redirectError: any) {
         if (redirectError.code === 'auth/unauthorized-domain') {
           const domain = window.location.hostname;
           const msg = `Domain '${domain}' is not authorized. Please go to Firebase Console -> Authentication -> Settings -> Authorized domains and add '${domain}'.`;
-          dispatch(actions.loginError(msg));
+          dispatch(loginError(msg));
         } else {
-          dispatch(actions.loginError(redirectError.message));
+          dispatch(loginError(redirectError.message));
         }
       }
     } else {
-      dispatch(actions.loginError(error.message));
+      dispatch(loginError(error.message));
     }
   }
 };
 
-export const logoutUser = () => async (dispatch) => {
-  dispatch(actions.logoutRequest());
+export const logoutUser = () => async (dispatch: AppDispatch) => {
+  dispatch(logoutRequest());
   try {
     await signOut(auth);
-    dispatch(actions.logoutSuccess());
-  } catch (error) {
-    dispatch(actions.logoutError(error.message));
+    dispatch(logoutSuccess());
+  } catch (error: any) {
+    dispatch(logoutError(error.message));
   }
 };
 
-export const updateCurrency = (currency) => async (dispatch, getState) => {
+export const updateCurrency = (currency: string) => async (dispatch: AppDispatch, getState: () => RootState) => {
   const { user } = getState().auth;
   if (!user) return;
 
   try {
     const userDocRef = routes.getUserDoc(user.uid);
     await updateDoc(userDocRef, { currency });
-    dispatch(actions.updateCurrencySuccess(currency));
+    dispatch(updateCurrencySuccess(currency));
   } catch (error) {
     handleFirestoreError(error, 'update', `users/${user.uid}`);
   }

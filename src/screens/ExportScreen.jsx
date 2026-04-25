@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, useColorScheme, TouchableOpacity, ActivityIndicator, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, ScrollView, Platform } from 'react-native';
 import { useSelector } from 'react-redux';
 import { selectTransactions } from '../store/modules/transactions/selectors';
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
+import { useAppTheme } from '../hooks/useAppTheme';
 
 const CURRENCY_SYMBOLS = {
   USD: '$',
@@ -16,7 +17,7 @@ const CURRENCY_SYMBOLS = {
 };
 
 export default function ExportScreen() {
-  const isDarkMode = useColorScheme() === 'dark';
+  const isDarkMode = useAppTheme();
   const user = useSelector(state => state.auth.user);
   const currencySymbol = CURRENCY_SYMBOLS[user?.currency || 'USD'] || '$';
   const transactions = useSelector(selectTransactions);
@@ -201,33 +202,43 @@ export default function ExportScreen() {
         {errorMsg ? <Text style={styles.errorText}>{errorMsg}</Text> : null}
         {successMsg ? <Text style={styles.successText}>{successMsg}</Text> : null}
 
-        <TouchableOpacity 
-          style={[styles.button, styles.btnJson]} 
-          onPress={exportJSON}
-          disabled={isExporting}
-        >
-          <Text style={styles.buttonText}>Export as JSON</Text>
-        </TouchableOpacity>
+        {Platform.OS !== 'web' ? (
+          <View style={[styles.card, isDarkMode ? styles.bgDarkCard : styles.bgLightCard]}>
+            <Text style={[styles.description, isDarkMode ? styles.textLight : styles.textDark]}>
+              Data export is currently only supported on the web version of FinTrack RN. Please log in from a browser to download your data.
+            </Text>
+          </View>
+        ) : (
+          <>
+            <TouchableOpacity 
+              style={[styles.button, styles.btnJson]} 
+              onPress={exportJSON}
+              disabled={isExporting}
+            >
+              <Text style={styles.buttonText}>Export as JSON</Text>
+            </TouchableOpacity>
 
-        <TouchableOpacity 
-          style={[styles.button, styles.btnCsv]} 
-          onPress={exportCSV}
-          disabled={isExporting}
-        >
-          <Text style={styles.buttonText}>Export as CSV</Text>
-        </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.button, styles.btnCsv]} 
+              onPress={exportCSV}
+              disabled={isExporting}
+            >
+              <Text style={styles.buttonText}>Export as CSV</Text>
+            </TouchableOpacity>
 
-        <TouchableOpacity 
-          style={[styles.button, styles.btnExcel]} 
-          onPress={exportExcel}
-          disabled={isExporting}
-        >
-          {isExporting ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.buttonText}>Export as Excel (with Graphs)</Text>
-          )}
-        </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.button, styles.btnExcel]} 
+              onPress={exportExcel}
+              disabled={isExporting}
+            >
+              {isExporting ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.buttonText}>Export as Excel (with Graphs)</Text>
+              )}
+            </TouchableOpacity>
+          </>
+        )}
       </View>
     </ScrollView>
   );
@@ -238,6 +249,8 @@ const styles = StyleSheet.create({
   content: { padding: 20 },
   bgLight: { backgroundColor: '#f3f4f6' },
   bgDark: { backgroundColor: '#111827' },
+  bgLightCard: { backgroundColor: '#ffffff' },
+  bgDarkCard: { backgroundColor: '#1f2937' },
   textLight: { color: '#f3f4f6' },
   textDark: { color: '#111827' },
   textGray400: { color: '#9ca3af' },
@@ -261,4 +274,15 @@ const styles = StyleSheet.create({
   buttonText: { color: '#ffffff', fontSize: 16, fontWeight: '600' },
   errorText: { color: '#ef4444', marginBottom: 16, fontSize: 14, textAlign: 'center' },
   successText: { color: '#22c55e', marginBottom: 16, fontSize: 14, textAlign: 'center' },
+  card: {
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  description: { fontSize: 16, lineHeight: 24, textAlign: 'center' },
 });

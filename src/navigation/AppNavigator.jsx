@@ -2,7 +2,7 @@ import React from 'react';
 import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createDrawerNavigator } from '@react-navigation/drawer';
-import { useColorScheme } from 'react-native';
+import { useAppTheme } from '../hooks/useAppTheme';
 
 import MainScreen from '../screens/MainScreen';
 import TransactionFormScreen from '../screens/TransactionFormScreen';
@@ -11,30 +11,33 @@ import SettingsScreen from '../screens/SettingsScreen';
 import AccountsScreen from '../screens/AccountsScreen';
 import AboutScreen from '../screens/AboutScreen';
 import ExportScreen from '../screens/ExportScreen';
+import SubscriptionsScreen from '../screens/SubscriptionsScreen';
+import SubscriptionFormScreen from '../screens/SubscriptionFormScreen';
 
 const Stack = createNativeStackNavigator();
 const Drawer = createDrawerNavigator();
 
 function DrawerNavigator() {
-  const scheme = useColorScheme();
+  const isDarkMode = useAppTheme();
   return (
     <Drawer.Navigator
       screenOptions={{
         headerStyle: {
-          backgroundColor: scheme === 'dark' ? '#1f2937' : '#ffffff',
+          backgroundColor: isDarkMode ? '#1f2937' : '#ffffff',
         },
-        headerTintColor: scheme === 'dark' ? '#f9fafb' : '#111827',
+        headerTintColor: isDarkMode ? '#f9fafb' : '#111827',
         headerTitleStyle: {
           fontWeight: 'bold',
         },
         drawerStyle: {
-          backgroundColor: scheme === 'dark' ? '#1f2937' : '#ffffff',
+          backgroundColor: isDarkMode ? '#1f2937' : '#ffffff',
         },
         drawerActiveTintColor: '#3b82f6',
-        drawerInactiveTintColor: scheme === 'dark' ? '#d1d5db' : '#4b5563',
+        drawerInactiveTintColor: isDarkMode ? '#d1d5db' : '#4b5563',
       }}
     >
       <Drawer.Screen name="Dashboard" component={MainScreen} options={{ title: 'FinTrack RN' }} />
+      <Drawer.Screen name="Subscriptions" component={SubscriptionsScreen} options={{ title: 'Subscriptions' }} />
       <Drawer.Screen name="Accounts" component={AccountsScreen} options={{ title: 'Manage Accounts' }} />
       <Drawer.Screen name="Settings" component={SettingsScreen} options={{ title: 'Settings' }} />
       <Drawer.Screen name="Export" component={ExportScreen} options={{ title: 'Export Data' }} />
@@ -44,17 +47,17 @@ function DrawerNavigator() {
 }
 
 export default function AppNavigator() {
-  const scheme = useColorScheme();
+  const isDarkMode = useAppTheme();
 
   return (
-    <NavigationContainer theme={scheme === 'dark' ? DarkTheme : DefaultTheme}>
+    <NavigationContainer theme={isDarkMode ? DarkTheme : DefaultTheme}>
       <Stack.Navigator 
         initialRouteName="Drawer"
         screenOptions={{
           headerStyle: {
-            backgroundColor: scheme === 'dark' ? '#1f2937' : '#ffffff',
+            backgroundColor: isDarkMode ? '#1f2937' : '#ffffff',
           },
-          headerTintColor: scheme === 'dark' ? '#f9fafb' : '#111827',
+          headerTintColor: isDarkMode ? '#f9fafb' : '#111827',
           headerTitleStyle: {
             fontWeight: 'bold',
           },
@@ -74,6 +77,11 @@ export default function AppNavigator() {
           name="EditTransaction" 
           component={TransactionFormScreen} 
           options={{ title: 'Edit Transaction' }}
+        />
+        <Stack.Screen 
+          name="SubscriptionForm" 
+          component={SubscriptionFormScreen} 
+          options={({ route }) => ({ title: route.params?.subscription ? 'Edit Subscription' : 'Add Subscription' })}
         />
         <Stack.Screen 
           name="Reports" 
