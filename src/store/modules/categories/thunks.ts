@@ -51,7 +51,7 @@ export const subscribeToCategories = () => (dispatch: AppDispatch) => {
   const unsubscribe = onSnapshot(q, (snapshot) => {
     const categories: any[] = [];
     snapshot.forEach((doc) => {
-      categories.push({ id: doc.id, ...doc.data() });
+      categories.push({ id: doc.id, ...doc.data({ serverTimestamps: 'estimate' }) });
     });
     dispatch(fetchCategoriesSuccess(categories));
   }, (error) => {

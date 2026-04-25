@@ -5,6 +5,8 @@ import { VictoryPie, VictoryBar, VictoryChart, VictoryAxis, VictoryGroup, Victor
 import { selectTotalBudget, selectTotalExpenses, selectTotalBalance, selectTransactions } from '../store/modules/transactions/selectors';
 import { useAppTheme } from '../hooks/useAppTheme';
 
+import { formatCurrency, getDateFromTimestamp } from '../utils/format';
+
 const CURRENCY_SYMBOLS = {
   USD: '$',
   EUR: '€',
@@ -51,7 +53,7 @@ export default function ReportsScreen() {
     const monthlyData = {};
     
     transactions.forEach(t => {
-      const date = t.date ? (t.date.toDate ? t.date.toDate() : new Date(t.date)) : new Date();
+      const date = getDateFromTimestamp(t.date);
       const monthYear = `${date.toLocaleString('default', { month: 'short' })} ${date.getFullYear()}`;
       
       if (!monthlyData[monthYear]) {
@@ -118,15 +120,15 @@ export default function ReportsScreen() {
           <div class="summary">
             <div class="summary-box">
               <h3>Total Income</h3>
-              <p class="income">${currencySymbol}${totalBudget.toFixed(2)}</p>
+              <p class="income">${formatCurrency(totalBudget, currencySymbol)}</p>
             </div>
             <div class="summary-box">
               <h3>Total Expenses</h3>
-              <p class="expense">${currencySymbol}${totalExpenses.toFixed(2)}</p>
+              <p class="expense">${formatCurrency(totalExpenses, currencySymbol)}</p>
             </div>
             <div class="summary-box">
               <h3>Net Balance</h3>
-              <p class="${totalBalance >= 0 ? 'income' : 'expense'}">${currencySymbol}${totalBalance.toFixed(2)}</p>
+              <p class="${totalBalance >= 0 ? 'income' : 'expense'}">${formatCurrency(totalBalance, currencySymbol)}</p>
             </div>
           </div>
 
@@ -140,7 +142,7 @@ export default function ReportsScreen() {
                   <span style="display:inline-block; width:12px; height:12px; background-color:${d.color}; border-radius:50%; margin-right:8px;"></span>
                   ${d.x}
                 </td>
-                <td>${currencySymbol}${d.y.toFixed(2)}</td>
+                <td>${formatCurrency(d.y, currencySymbol)}</td>
                 <td>${percentage}%</td>
               </tr>`;
             }).join('') : '<tr><td colspan="3" style="text-align:center;">No expenses recorded</td></tr>'}
@@ -150,20 +152,18 @@ export default function ReportsScreen() {
           <table>
             <tr><th>Date</th><th>Description</th><th>Category</th><th>Account</th><th>Type</th><th>Amount</th></tr>
             ${transactions.length > 0 ? [...transactions].sort((a, b) => {
-              const dateA = a.date ? (a.date.toDate ? a.date.toDate().getTime() : new Date(a.date).getTime()) : 0;
-              const dateB = b.date ? (b.date.toDate ? b.date.toDate().getTime() : new Date(b.date).getTime()) : 0;
-              return dateB - dateA;
+              return getDateFromTimestamp(b.date).getTime() - getDateFromTimestamp(a.date).getTime();
             }).map(t => {
               const cat = categories.find(c => c.id === t.categoryId);
               const acc = accounts.find(a => a.id === t.accountId);
-              const dateStr = t.date ? (t.date.toDate ? t.date.toDate().toLocaleDateString() : new Date(t.date).toLocaleDateString()) : 'N/A';
+              const dateStr = getDateFromTimestamp(t.date).toLocaleDateString();
               return `<tr>
                 <td>${dateStr}</td>
                 <td>${t.description || '-'}</td>
                 <td>${cat ? cat.name : '-'}</td>
                 <td>${acc ? acc.name : 'Default Account'}</td>
                 <td class="${t.type === 'INCOME' ? 'income' : 'expense'}">${t.type}</td>
-                <td class="${t.type === 'INCOME' ? 'income' : 'expense'}">${currencySymbol}${Number(t.amount).toFixed(2)}</td>
+                <td class="${t.type === 'INCOME' ? 'income' : 'expense'}">${formatCurrency(Number(t.amount), currencySymbol)}</td>
               </tr>`;
             }).join('') : '<tr><td colspan="6" style="text-align:center;">No transactions found</td></tr>'}
           </table>
@@ -224,7 +224,7 @@ export default function ReportsScreen() {
             />
             <VictoryAxis 
               dependentAxis
-              tickFormat={(x) => `${currencySymbol}${x}`}
+              tickFormat={(x) => `${formatCurrency(x, currencySymbol)}`}
               style={{
                 axis: { stroke: axisColor },
                 tickLabels: { fill: textColor, fontSize: 10, padding: 5 },
@@ -259,7 +259,7 @@ export default function ReportsScreen() {
               style={{
                 labels: { fill: textColor, fontSize: 12, fontWeight: 'bold' }
               }}
-              labels={({ datum }) => `${datum.x}\n$${datum.y}`}
+              labels={({ datum }) => `${datum.x}\n${formatCurrency(datum.y, currencySymbol)}`}
             />
           </View>
         ) : (

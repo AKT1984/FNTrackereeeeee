@@ -6,6 +6,7 @@ import { subscribeToCategories } from '../store/modules/categories/thunks';
 import { subscribeToAccounts } from '../store/modules/accounts/thunks';
 import { selectTotalBudget, selectTotalExpenses, selectTotalBalance, selectTransactions, selectBalancesByAccount } from '../store/modules/transactions/selectors';
 import { useAppTheme } from '../hooks/useAppTheme';
+import { formatCurrency, getDateFromTimestamp } from '../utils/format';
 
 const CURRENCY_SYMBOLS = {
   USD: '$',
@@ -71,16 +72,16 @@ export default function MainScreen({ navigation }) {
             {item.description || 'No Description'}
           </Text>
           <Text style={styles.transactionDate}>
-            {item.date ? (item.date.toDate ? item.date.toDate().toLocaleDateString() : new Date(item.date).toLocaleDateString()) : 'N/A'} • {accountName}
+            {getDateFromTimestamp(item.date).toLocaleDateString()} • {accountName}
           </Text>
           {item.originalCurrency && item.originalCurrency !== itemCurrency && (
             <Text style={styles.originalAmountText}>
-              ({CURRENCY_SYMBOLS[item.originalCurrency] || item.originalCurrency}{Number(item.originalAmount).toFixed(2)})
+              ({formatCurrency(item.originalAmount, CURRENCY_SYMBOLS[item.originalCurrency] || item.originalCurrency)})
             </Text>
           )}
         </View>
         <Text style={[styles.transactionAmount, item.type === 'INCOME' ? styles.textGreen : styles.textRed]}>
-          {item.type === 'INCOME' ? '+' : '-'}{itemCurrencySymbol}{Number(item.amount).toFixed(2)}
+          {item.type === 'INCOME' ? '+' : ''}{formatCurrency(item.type === 'EXPENSE' ? -Number(item.amount) : Number(item.amount), itemCurrencySymbol)}
         </Text>
       </TouchableOpacity>
     );
@@ -97,7 +98,7 @@ export default function MainScreen({ navigation }) {
             </TouchableOpacity>
           </View>
           <Text style={[styles.balanceAmount, totalBalance >= 0 ? styles.textGreen : styles.textRed]}>
-            {currencySymbol}{totalBalance.toFixed(2)}
+            {formatCurrency(totalBalance, currencySymbol)}
           </Text>
         </View>
 
@@ -119,7 +120,7 @@ export default function MainScreen({ navigation }) {
                 <View key={account.id} style={[styles.accountPill, isDarkMode ? styles.bgDarkCard : styles.bgLightCard]}>
                   <Text style={[styles.accountName, isDarkMode ? styles.textGray400 : styles.textGray500]}>{account.name}</Text>
                   <Text style={[styles.accountBalance, balance >= 0 ? styles.textGreen : styles.textRed]}>
-                    {accCurrencySymbol}{balance.toFixed(2)}
+                    {formatCurrency(balance, accCurrencySymbol)}
                   </Text>
                 </View>
               );
@@ -131,13 +132,13 @@ export default function MainScreen({ navigation }) {
           <View style={[styles.halfCard, isDarkMode ? styles.bgDarkCard : styles.bgLightCard]}>
             <Text style={[styles.cardLabel, isDarkMode ? styles.textGray400 : styles.textGray500]}>Budget (Income)</Text>
             <Text style={[styles.halfCardAmount, styles.textGreen]}>
-              {currencySymbol}{totalBudget.toFixed(2)}
+              {formatCurrency(totalBudget, currencySymbol)}
             </Text>
           </View>
           <View style={[styles.halfCard, isDarkMode ? styles.bgDarkCard : styles.bgLightCard]}>
             <Text style={[styles.cardLabel, isDarkMode ? styles.textGray400 : styles.textGray500]}>Expenses</Text>
             <Text style={[styles.halfCardAmount, styles.textRed]}>
-              {currencySymbol}{totalExpenses.toFixed(2)}
+              {formatCurrency(totalExpenses, currencySymbol)}
             </Text>
           </View>
         </View>
@@ -162,9 +163,7 @@ export default function MainScreen({ navigation }) {
         ) : (
           <FlatList
             data={[...transactions].sort((a, b) => {
-              const dateA = a.date ? (a.date.toDate ? a.date.toDate().getTime() : new Date(a.date).getTime()) : 0;
-              const dateB = b.date ? (b.date.toDate ? b.date.toDate().getTime() : new Date(b.date).getTime()) : 0;
-              return dateB - dateA;
+              return getDateFromTimestamp(b.date).getTime() - getDateFromTimestamp(a.date).getTime();
             })}
             keyExtractor={item => item.id}
             renderItem={renderItem}

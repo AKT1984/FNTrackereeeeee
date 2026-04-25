@@ -51,7 +51,7 @@ export const subscribeToTransactions = () => (dispatch: AppDispatch) => {
   const unsubscribe = onSnapshot(q, (snapshot) => {
     const transactions: any[] = [];
     snapshot.forEach((doc) => {
-      transactions.push({ id: doc.id, ...doc.data() });
+      transactions.push({ id: doc.id, ...doc.data({ serverTimestamps: 'estimate' }) });
     });
     dispatch(fetchTransactionsSuccess(transactions));
   }, (error) => {

@@ -5,6 +5,7 @@ import { selectTransactions } from '../store/modules/transactions/selectors';
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
 import { useAppTheme } from '../hooks/useAppTheme';
+import { formatCurrency, getDateFromTimestamp } from '../utils/format';
 
 const CURRENCY_SYMBOLS = {
   USD: '$',
@@ -58,7 +59,7 @@ export default function ExportScreen() {
     try {
       const headers = ['Date', 'Description', 'Category', 'Type', `Amount (${currencySymbol})`];
       const rows = transactions.map(t => {
-        const date = t.date ? (t.date.toDate ? t.date.toDate().toLocaleDateString() : new Date(t.date).toLocaleDateString()) : '';
+        const date = getDateFromTimestamp(t.date).toLocaleDateString();
         return [
           date,
           `"${(t.description || '').replace(/"/g, '""')}"`,
@@ -96,7 +97,7 @@ export default function ExportScreen() {
       sheet1.getRow(1).font = { bold: true };
       
       transactions.forEach(t => {
-        const date = t.date ? (t.date.toDate ? t.date.toDate().toLocaleDateString() : new Date(t.date).toLocaleDateString()) : '';
+        const date = getDateFromTimestamp(t.date).toLocaleDateString();
         sheet1.addRow({
           date,
           description: t.description,
@@ -163,7 +164,7 @@ export default function ExportScreen() {
           ctx.fillStyle = item.color || '#000000';
           ctx.fillRect(400, legendY - 12, 15, 15);
           ctx.fillStyle = '#000000';
-          ctx.fillText(`${item.name} (${currencySymbol}${item.total.toFixed(2)})`, 425, legendY);
+          ctx.fillText(`${item.name} (${formatCurrency(item.total, currencySymbol)})`, 425, legendY);
           legendY += 30;
         });
 

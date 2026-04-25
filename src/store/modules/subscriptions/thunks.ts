@@ -53,7 +53,7 @@ export const subscribeToSubscriptions = () => (dispatch: AppDispatch, getState: 
   unsubscribeSubscriptions = onSnapshot(q, (snapshot) => {
     const subscriptions: any[] = [];
     snapshot.forEach((doc) => {
-      subscriptions.push({ id: doc.id, ...doc.data() });
+      subscriptions.push({ id: doc.id, ...doc.data({ serverTimestamps: 'estimate' }) });
     });
     dispatch(fetchSubscriptionsSuccess(subscriptions));
   }, (error) => {

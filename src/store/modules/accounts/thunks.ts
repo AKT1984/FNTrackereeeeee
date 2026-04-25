@@ -53,7 +53,7 @@ export const subscribeToAccounts = () => (dispatch: AppDispatch, getState: () =>
   unsubscribeAccounts = onSnapshot(q, (snapshot) => {
     const accounts: any[] = [];
     snapshot.forEach((doc) => {
-      accounts.push({ id: doc.id, ...doc.data() });
+      accounts.push({ id: doc.id, ...doc.data({ serverTimestamps: 'estimate' }) });
     });
     dispatch(fetchAccountsSuccess(accounts));
   }, (error) => {

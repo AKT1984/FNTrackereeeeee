@@ -4,6 +4,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { deleteSubscription } from '../store/modules/subscriptions/thunks';
 import { Plus, Edit2, Trash2, Calendar, Bell } from 'lucide-react';
 import { useAppTheme } from '../hooks/useAppTheme';
+import { formatCurrency, getDateFromTimestamp } from '../utils/format';
 
 const CURRENCY_SYMBOLS = {
   USD: '$', EUR: '€', GBP: '£', JPY: '¥', MDL: 'L', RUB: '₽', UAH: '₴',
@@ -27,9 +28,7 @@ export default function SubscriptionsScreen({ navigation }) {
     const account = accounts.find(a => a.id === item.accountId);
     const currencySymbol = CURRENCY_SYMBOLS[item.currency] || item.currency || '$';
     
-    const nextBillingDate = item.nextBillingDate ? 
-      (item.nextBillingDate.toDate ? item.nextBillingDate.toDate() : new Date(item.nextBillingDate)) 
-      : null;
+    const nextBillingDate = item.nextBillingDate ? getDateFromTimestamp(item.nextBillingDate) : null;
 
     return (
       <View style={[styles.card, isDarkMode ? styles.bgDarkCard : styles.bgLightCard]}>
@@ -43,7 +42,7 @@ export default function SubscriptionsScreen({ navigation }) {
             )}
           </View>
           <Text style={[styles.amount, styles.textRed]}>
-            -{currencySymbol}{Number(item.amount).toFixed(2)}
+            {formatCurrency(-Number(item.amount), currencySymbol)}
           </Text>
         </View>
 

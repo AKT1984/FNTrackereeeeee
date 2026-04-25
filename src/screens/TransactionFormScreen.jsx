@@ -9,6 +9,7 @@ import CategoryModal from '../components/CategoryModal';
 import AccountModal from '../components/AccountModal';
 import { fetchExchangeRate } from '../services/exchangeRateService';
 import { useAppTheme } from '../hooks/useAppTheme';
+import { formatCurrency, getDateFromTimestamp } from '../utils/format';
 
 const CURRENCY_SYMBOLS = {
   USD: '$',
@@ -136,7 +137,7 @@ export default function TransactionFormScreen({ route, navigation }) {
   };
 
   const convertedDisplay = currency !== baseCurrency && amount && !isNaN(Number(amount))
-    ? `≈ ${CURRENCY_SYMBOLS[baseCurrency] || baseCurrency}${(Number(amount) * exchangeRate).toFixed(2)}`
+    ? `≈ ${formatCurrency(Number(amount) * exchangeRate, CURRENCY_SYMBOLS[baseCurrency] || baseCurrency)}`
     : null;
 
   return (
