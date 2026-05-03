@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, FlatList, ActivityIndicator } from 'react-native';
 import { useSelector, useDispatch } from 'react-redux';
 import { deleteSubscription } from '../store/modules/subscriptions/thunks';
-import { Plus, Edit2, Trash2, Calendar, Bell } from 'lucide-react';
+import { Plus, Edit2, Trash2, Calendar, Bell } from 'lucide-react-native';
 import { useAppTheme } from '../hooks/useAppTheme';
 import { formatCurrency, getDateFromTimestamp } from '../utils/format';
 

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, FlatList, TextInput, Alert } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { addAccount, updateAccount, deleteAccount } from '../store/modules/accounts/thunks';
-import { Plus, Edit2, Trash2, X, Check } from 'lucide-react';
+import { Plus, Edit2, Trash2, X, Check } from 'lucide-react-native';
 import { useAppTheme } from '../hooks/useAppTheme';
 
 const CURRENCIES = ['USD', 'EUR', 'GBP', 'JPY', 'MDL', 'RUB', 'UAH'];

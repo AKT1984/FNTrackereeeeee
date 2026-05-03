@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform } from '
 import { useDispatch, useSelector } from 'react-redux';
 import { updateCurrency, logoutUser } from '../store/modules/auth/thunks';
 import { setTheme } from '../store/modules/settings/slice';
-import { LogOut, User, Download, Info, ChevronRight, Moon, Sun, Monitor } from 'lucide-react';
+import { LogOut, User, Download, Info, ChevronRight, Moon, Sun, Monitor } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useAppTheme } from '../hooks/useAppTheme';
 

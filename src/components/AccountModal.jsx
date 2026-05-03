@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, Modal, TouchableOpacity, FlatList } from 'react-native';
 import { useSelector } from 'react-redux';
-import { X } from 'lucide-react';
+import { X } from 'lucide-react-native';
 import { useAppTheme } from '../hooks/useAppTheme';
 
 export default function AccountModal({ visible, onClose, onSelect }) {
